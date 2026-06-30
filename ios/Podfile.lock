@@ -1,0 +1,21 @@
+PODS:
+  - Flutter (1.0.0)
+  - qwen_echo_engine (0.1.0)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - qwen_echo_engine (from `../native`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  qwen_echo_engine:
+    :path: "../native"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  qwen_echo_engine: 10fa2257573e8ed4e9da69f96dc835477917aa39
+
+PODFILE CHECKSUM: 63b152a64e46ea583046733e772ca3e030cec96f
+
+COCOAPODS: 1.16.2
