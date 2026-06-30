@@ -1,0 +1,701 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create C/C++ project structure and build system": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328107
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711347188
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711595505
+      }
+    ],
+    "1.2 Implement AudioRingBuffer (SPSC lock-free circular buffer)": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328311
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711608748
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723785947
+      }
+    ],
+    "1.4 Implement BoundedSPSCQueue template": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328347
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711609599
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723786811
+      }
+    ],
+    "2.1 Define HAL interfaces": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328375
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711348494
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711597698
+      }
+    ],
+    "2.2 Implement Android HAL backends": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328412
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711610191
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723787594
+      }
+    ],
+    "2.3 Implement iOS HAL backends": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328441
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711611280
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723788826
+      }
+    ],
+    "3. Checkpoint - Core infrastructure": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328473
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723825593
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723831477
+      }
+    ],
+    "4.1 Implement Model Loader": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328500
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723873321
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725419024
+      }
+    ],
+    "4.3 Implement Engine Manager state machine and lifecycle": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328532
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725427554
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725743628
+      }
+    ],
+    "5.1 Implement FFI Bridge C-linkage functions": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328562
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723874377
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725420184
+      }
+    ],
+    "5.2 Implement Native Port message dispatch": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328592
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725428899
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725744852
+      }
+    ],
+    "6. Checkpoint - Engine lifecycle and FFI": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328623
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725758569
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725764024
+      }
+    ],
+    "7.1 Implement Audio Collector thread": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328654
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725769750
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782726981099
+      }
+    ],
+    "7.3 Implement VAD + Sentence Segmenter": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328683
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725770780
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782726982302
+      }
+    ],
+    "8.1 Implement ASR processing stage": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328717
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727000680
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727459213
+      }
+    ],
+    "9.1 Implement LLM translation stage": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328748
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727466470
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727672360
+      }
+    ],
+    "10.1 Implement TTS synthesis stage": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328780
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727679412
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727907250
+      }
+    ],
+    "11. Checkpoint - Pipeline stages complete": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328808
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727918262
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727924119
+      }
+    ],
+    "12.1 Implement Thermal Monitor": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328840
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727925056
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782728085766
+      }
+    ],
+    "13.1 Implement Memory Monitor": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328870
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727926103
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782728086415
+      }
+    ],
+    "14.1 Implement graceful pipeline stop logic": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328899
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782728096965
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782730364599
+      }
+    ],
+    "15. Checkpoint - Engine complete": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328932
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782730374929
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782730381798
+      }
+    ],
+    "16.1 Implement Dart FFI bindings and Port Manager": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328963
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782730382849
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782777645780
+      }
+    ],
+    "16.2 Implement Split View Controller with bilateral display": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711328991
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782777651297
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778120861
+      }
+    ],
+    "16.3 Implement text rendering with three-color state and scrolling": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711329023
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782777651981
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778122385
+      }
+    ],
+    "16.5 Implement offline status indicator and error display": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711329054
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782777652895
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778123184
+      }
+    ],
+    "17.1 Implement offline-only enforcement": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711329084
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782777653848
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778121670
+      }
+    ],
+    "18.1 Wire full pipeline with cascade truncation": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711329115
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778131009
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778591381
+      }
+    ],
+    "19. Final checkpoint - Full integration": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782711329146
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778598927
+      },
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778606109
+      }
+    ],
+    "1. Project structure and core data types": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723786845
+      }
+    ],
+    "2. Platform Abstraction Layer (HAL)": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723788866
+      }
+    ],
+    "1.3 Write property tests for AudioRingBuffer": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723866697
+      }
+    ],
+    "1.5 Write property test for BoundedSPSCQueue": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782723867980
+      }
+    ],
+    "4.2 Write property test for Model Validation": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725426669
+      }
+    ],
+    "4. Model Loader and Engine Manager": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725743669
+      }
+    ],
+    "5. Dart FFI Bridge": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725744883
+      }
+    ],
+    "4.4 Write property tests for Engine State Machine and Init Idempotence": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725750892
+      }
+    ],
+    "5.3 Write property tests for FFI Bridge": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782725752193
+      }
+    ],
+    "7. Audio Collector and VAD/Sentence Segmenter": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782726982335
+      }
+    ],
+    "7.2 Write property test for Audio Sample Drop Reporting": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782726991555
+      }
+    ],
+    "7.4 Write property test for Sentence Segmenter": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782726992805
+      }
+    ],
+    "8. ASR Stage": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727459251
+      }
+    ],
+    "8.2 Write property test for SLA Violation Reporting (ASR)": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727460758
+      }
+    ],
+    "9. LLM Translation Stage": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727672404
+      }
+    ],
+    "9.2 Write property tests for LLM Translation": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727673429
+      }
+    ],
+    "10. TTS Synthesis Stage": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727907294
+      }
+    ],
+    "10.2 Write property tests for TTS Stage": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782727909925
+      }
+    ],
+    "12. Thermal Monitor": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782728085804
+      }
+    ],
+    "13. Memory Monitor": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782728086454
+      }
+    ],
+    "12.2 Write property test for Thermal State Machine": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782728087485
+      }
+    ],
+    "13.2 Write property test for Memory Mitigation": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782728088372
+      }
+    ],
+    "14. Pipeline Stop Segment Handling": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782730364640
+      }
+    ],
+    "14.2 Write property test for Pipeline Stop Segment Handling": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782730366311
+      }
+    ],
+    "17. Offline and Security Enforcement": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778121703
+      }
+    ],
+    "16. Flutter UI Shell": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778123213
+      }
+    ],
+    "16.4 Write property tests for UI text color and line buffer": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778124791
+      }
+    ],
+    "18. End-to-end latency validation and wiring": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778591417
+      }
+    ],
+    "18.2 Write property test for SLA Violation identification (all stages)": [
+      {
+        "executionId": "06791d16-c2c6-460f-86b8-fe281bc89037",
+        "chatSessionId": "sess_fdb4dab2-229e-4c70-b88f-e213f7b71a53",
+        "timestamp": 1782778592995
+      }
+    ]
+  }
+}

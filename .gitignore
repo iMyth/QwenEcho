@@ -1,0 +1,30 @@
+# Models (too large for git)
+models/
+*.gguf
+
+# Native build artifacts
+native/build/
+
+# Flutter/Dart
+.dart_tool/
+build/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+*.xcworkspace
+*.xcuserdata
+
+# Generated
+*.g.dart
+*.freezed.dart
