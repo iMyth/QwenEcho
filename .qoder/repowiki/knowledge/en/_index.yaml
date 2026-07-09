@@ -1,0 +1,163 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: fix/ios-native-linking
+nodes_managed: true
+exported_at: "2026-07-08T10:47:50Z"
+modules:
+    "":
+        dir_name: QwenEcho — On-Device Simultaneous Interpretation App
+        title: QwenEcho — On-Device Simultaneous Interpretation App
+        scope:
+            - README.md
+            - .gitignore
+            - analysis_options.yaml
+            - pubspec.yaml
+            - origin.png
+        source_files: []
+        children:
+            - dart_app
+            - dart_tests
+            - ios_platform
+            - kiro_specs
+            - native_engine
+        depends_on: []
+        related_to: []
+    dart_app:
+        dir_name: QwenEcho Dart Application Shell
+        title: QwenEcho Dart Application Shell
+        scope:
+            - lib/
+        source_files: []
+        children:
+            - dart_app/echo_engine_core
+            - dart_app/ui_layer
+        depends_on: []
+        related_to: []
+    dart_app/echo_engine_core:
+        dir_name: QwenEcho Native Engine Dart Bridge
+        title: QwenEcho Native Engine Dart Bridge
+        scope:
+            - lib/src/echo_engine.dart
+            - lib/src/messages.dart
+            - lib/src/native_bridge.dart
+            - lib/src/port_manager.dart
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: dart_app/ui_layer
+            - path: native_engine
+    dart_app/ui_layer:
+        dir_name: Flutter Interpretation UI Shell
+        title: Flutter Interpretation UI Shell
+        scope:
+            - lib/src/ui/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: dart_app/echo_engine_core
+    dart_tests:
+        dir_name: Flutter UI & Message Protocol Unit Tests
+        title: Flutter UI & Message Protocol Unit Tests
+        scope:
+            - test/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    ios_platform:
+        dir_name: iOS App Wrapper & CocoaPods Integration
+        title: iOS App Wrapper & CocoaPods Integration
+        scope:
+            - ios/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: native_engine
+    kiro_specs:
+        dir_name: QwenEcho Feature Specification (Kiro Spec)
+        title: QwenEcho Feature Specification (Kiro Spec)
+        scope:
+            - .kiro/specs/qwen-echo/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine:
+        dir_name: QwenEcho Native Engine — C FFI Surface for Flutter
+        title: QwenEcho Native Engine — C FFI Surface for Flutter
+        scope:
+            - native/
+        source_files: []
+        children:
+            - native_engine/audio_and_latency
+            - native_engine/engine_core
+            - native_engine/pipeline_stages
+            - native_engine/platform_hal
+            - native_engine/system_and_model
+        depends_on: []
+        related_to:
+            - path: dart_app/echo_engine_core
+            - path: ios_platform
+    native_engine/audio_and_latency:
+        dir_name: Audio Capture & End-to-End Latency Tracking
+        title: Audio Capture & End-to-End Latency Tracking
+        scope:
+            - native/src/audio_collector.cpp
+            - native/src/latency_tracker.cpp
+            - native/include/audio_ring_buffer.h
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: native_engine/engine_core
+    native_engine/engine_core:
+        dir_name: Engine Core — Lifecycle & Pipeline Orchestration
+        title: Engine Core — Lifecycle & Pipeline Orchestration
+        scope:
+            - native/src/engine.cpp
+            - native/src/engine_manager.cpp
+            - native/src/pipeline_controller.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: native_engine/audio_and_latency
+            - path: native_engine/pipeline_stages
+            - path: native_engine/system_and_model
+    native_engine/pipeline_stages:
+        dir_name: ASR → LLM → TTS Pipeline Stages
+        title: ASR → LLM → TTS Pipeline Stages
+        scope:
+            - native/src/asr_stage.cpp
+            - native/src/llm_stage.cpp
+            - native/src/tts_stage.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: native_engine/engine_core
+    native_engine/platform_hal:
+        dir_name: Platform Hardware Abstraction Layer (HAL)
+        title: Platform Hardware Abstraction Layer (HAL)
+        scope:
+            - native/hal/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine/system_and_model:
+        dir_name: System Resource Monitors & GGUF Model Loader
+        title: System Resource Monitors & GGUF Model Loader
+        scope:
+            - native/src/memory_monitor.cpp
+            - native/src/thermal_monitor.cpp
+            - native/src/model_loader.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: native_engine/engine_core

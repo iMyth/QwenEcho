@@ -1,0 +1,3 @@
+- AppDelegate subclasses `FlutterAppDelegate` and defers all lifecycle to `super` except plugin registration inside `didInitializeImplicitFlutterEngine`.
+- SceneDelegate subclasses `FlutterSceneDelegate` without overriding any methods, letting Flutter own the full scene lifecycle.
+- Build configuration is driven by CocoaPods (`Podfile` + `post_install` calling `flutter_additional_ios_build_settings`) rather than hand-edited Xcode settings.

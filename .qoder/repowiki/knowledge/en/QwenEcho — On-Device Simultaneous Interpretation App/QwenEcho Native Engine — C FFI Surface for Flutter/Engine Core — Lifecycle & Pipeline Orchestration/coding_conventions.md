@@ -1,0 +1,5 @@
+- Opaque handle pattern: each manager exposes `*_create` / `*_destroy` returning a `void*` cast to an internal struct pointer, with every public function guarding against a null handle.
+- State transitions are guarded by `std::lock_guard<std::mutex>` at the top of each mutating entry point, and callers check the current `EngineState` enum before proceeding.
+- Resource acquisition uses `new(std::nothrow)` followed by immediate `destroy_pipeline_resources` rollback on failure, ensuring partial allocations never leak.
+- C++ members inside `calloc`-allocated structs are constructed via placement-new in `*_create` and explicitly destroyed (`~mutex()`, `~atomic<bool>()`) in `*_destroy` before `free()`.
+- Language support is validated against a static `kSupportedLanguages[]` table rather than ad-hoc string comparisons.

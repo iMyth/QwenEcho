@@ -1,0 +1,5 @@
+- Each tested class gets its own `<class>_test.dart` file under `test/` or `test/ui/`, mirroring the `src/` layout one-to-one.
+- Widget tests wrap the target widget in a minimal `MaterialApp(home: Scaffold(...))` scaffold and locate children via `find.byType` / `find.text` assertions rather than inspecting the widget tree directly.
+- Stream-driven widgets receive a `StreamController<EchoMessage>.broadcast()` injected at construction, with `addTearDown(controller.close)` ensuring cleanup after each test.
+- Stateful widgets are driven through a `GlobalKey<State>` passed to the widget constructor, exposing public mutation methods like `addAsrConfirmed`, `updateLastLine`, and `addTranslation` instead of simulating user gestures.
+- Pure-value classes (LineBuffer, DisplayLine) are instantiated in `setUp` and disposed in `tearDown`, keeping each test isolated from shared mutable state.

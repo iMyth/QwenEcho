@@ -1,0 +1,1 @@
+Before running `pod install`, `flutter pub get` must be executed first because `Podfile` reads `FLUTTER_ROOT` from `Flutter/Generated.xcconfig`. The local native engine lives at `../native` and is pulled in through the Podfile path reference.

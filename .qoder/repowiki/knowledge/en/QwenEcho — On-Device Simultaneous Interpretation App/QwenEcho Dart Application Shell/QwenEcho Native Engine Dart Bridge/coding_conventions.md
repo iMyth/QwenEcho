@@ -1,0 +1,4 @@
+- Each native call follows a try/catch pattern that converts the C int32_t return code via `_throwOnError`, which throws `EchoEngineException(code, EchoErrorCode.describe(code))` instead of returning error values.
+- Every `EchoMessage` subclass mirrors the C wire layout with a private `_fromRaw(List<dynamic> raw)` factory that casts positional fields by index, and the base `EchoMessage.fromRawList` dispatches via a `switch` over `MessageType` constants.
+- String arguments passed to native functions are allocated with `.toNativeUtf8()` and freed in a `finally` block using `calloc.free(...)` to avoid leaks.
+- Platform-specific dynamic library selection is centralized in a single `_loadLibrary` helper branching on `Platform.isAndroid/isLinux` vs `Platform.isIOS/isMacOS`, throwing `UnsupportedError` for unknown platforms.

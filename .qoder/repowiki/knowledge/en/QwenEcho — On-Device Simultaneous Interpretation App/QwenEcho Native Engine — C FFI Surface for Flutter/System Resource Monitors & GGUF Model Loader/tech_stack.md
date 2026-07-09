@@ -1,0 +1,1 @@
+POSIX-only: `<sys/mman.h>` for `mmap`/`munmap`/`madvise`, `<fcntl.h>`/`<unistd.h>` for `open`/`close`/`stat`/`access`, `std::thread` + `std::condition_variable` for the polling loops, and `extern "C"` handles to bridge into the rest of the engine.

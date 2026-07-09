@@ -1,0 +1,1 @@
+Flutter ≥3.16 with Dart FFI (`ffi ^2.1.3`) as the sole cross-language bridge; CMake + C++17 for the native engine; CocoaPods/Xcode for the iOS wrapper; RapidCheck for native property-based tests; GGUF/INT4 models loaded from on-device sandbox via `path_provider` and `file_picker`.

@@ -1,0 +1,1 @@
+Background monitors for process memory and thermal state plus a GGUF model loader that validates, memory-maps, and tracks ASR/LLM/TTS models.

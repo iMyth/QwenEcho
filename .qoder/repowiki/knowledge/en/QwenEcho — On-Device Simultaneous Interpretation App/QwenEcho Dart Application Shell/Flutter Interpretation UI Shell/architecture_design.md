@@ -1,0 +1,8 @@
+Pure Flutter `StatefulWidget`-based shell with no AI logic — all processing is delegated to the native Engine via streams.
+
+- View composition: `SplitView` (top-level) owns two `SpeakerHalf` widgets via `GlobalKey<SpeakerHalfState>`; the top half is rotated 180° so the opposing speaker can read it. It exposes `addAsrPartial`, `addAsrConfirmed`, `addTranslation`, and `clearAll` as the public API consumed by the engine bridge.
+- Two parallel line-buffer implementations coexist: `LineBuffer` (`ChangeNotifier` + `DisplayLine`/`LineState`) used by the reusable `TextDisplay` widget, and an inlined `_lines` list inside `SpeakerHalf` (with its own `DisplayLine`/color constants) driven directly through `GlobalKey` calls from `SplitView`. Both enforce a 50-line FIFO cap.
+- `StatusBar` subscribes to the shared `Stream<EchoMessage>` to render a persistent OFFLINE badge and a thermal-mode indicator (Normal/Throttle/Critical), while nesting `WarningOverlay` as a stacked child.
+- `WarningOverlay` listens to the same message stream, filters `MemoryWarningMessage` and `LatencyWarningMessage`, caps visible entries at `maxVisible`, and auto-dismisses after `displayDuration` using a periodic timer plus a swappable `clock` function for testing.
+- `ModelConfigScreen` is a self-contained full-screen page that delegates file I/O to `ModelRepository` (injected via constructor) and uses `file_picker` for local GGUF import with streamed progress updates.
+- Dependency direction is one-way: this module imports `../model/*` and `../messages.dart`; nothing in `lib/src/ui/` is imported back into the engine or model layers.

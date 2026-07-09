@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: dart_tests
+title: Flutter UI & Message Protocol Unit Tests
+scope:
+    - test/
+source_files: []
+depends_on: []
+related_to: []

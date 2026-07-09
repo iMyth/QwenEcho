@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: dart_app
+title: QwenEcho Dart Application Shell
+scope:
+    - lib/
+source_files: []
+depends_on: []
+related_to: []

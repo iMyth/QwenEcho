@@ -1,0 +1,1 @@
+C ABI surface that abstracts Android and iOS hardware features — audio capture, thermal monitoring, memory stats, thread priority, and NPU/GPU inference acceleration — behind a single cross-platform API.

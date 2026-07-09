@@ -1,0 +1,4 @@
+- Each subsystem owns an opaque struct defined in its own `.cpp` and exposes a matching set of `*_create` / `*_start` / `*_stop` / `*_get_*` / `*_destroy` functions wrapped in `extern "C"` blocks.
+- Background polling threads use an atomic `running` flag plus a `std::condition_variable::wait_for` loop so they can be interrupted immediately on stop rather than sleeping until the next interval.
+- State transitions are guarded by hysteresis: memory uses upward-only escalation (never downgrade), while thermal uses paired high/low thresholds per edge to avoid oscillation.
+- All cross-module communication goes through the `native_port_*` posting functions (e.g. `native_port_post_memory_warning`, `native_port_post_thermal_state`) instead of direct function calls, keeping monitors decoupled from the UI shell.

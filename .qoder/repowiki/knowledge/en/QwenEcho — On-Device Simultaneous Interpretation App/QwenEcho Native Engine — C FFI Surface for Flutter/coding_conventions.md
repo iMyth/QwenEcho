@@ -1,0 +1,3 @@
+- All cross-language entry points live in `include/ffi_bridge.h` with `extern "C"` linkage and `__attribute__((visibility("default")))`; every function returns `int32_t` where 0 means success and negative values encode `EchoErrorCode`.
+- Platform-specific code lives under `hal/{android,ios}/` implementing the same `hal_*.h` C ABI declared in `hal/`, selected by `if(ANDROID)` at CMake configure time rather than runtime dispatch.
+- Each test file under `tests/` is an independent executable built from its own `test_*.cpp` plus any minimal sources needed, linked against RapidCheck instead of the full engine.

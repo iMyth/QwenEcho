@@ -1,0 +1,5 @@
+The `lib/` tree is the Flutter app entry point; it does not contain business logic but orchestrates two child layers:
+- `src/echo_engine.dart`, `src/native_bridge.dart`, `src/port_manager.dart`, `src/messages.dart` form the echo_engine_core layer (FFI + typed message stream).
+- `src/ui/*` and `src/model/*` form the ui_layer (Flutter widgets + model config).
+
+`main.dart` instantiates `EchoEngine`, subscribes once to its `messages` Stream, and dispatches each `EchoMessage` subtype into the appropriate widget via `SplitView`'s exposed methods (`addAsrPartial`, `addAsrConfirmed`, `addTranslation`). The same `_engine.messages` stream is also passed directly to `StatusBar` so health/warnings are rendered without duplication. `qwen_echo.dart` re-exports only the public surface of both layers as a single library for downstream consumers. There is no dependency-injection framework — wiring is done in `main.dart` at startup, making it the single source of truth for how the engine and UI are connected.

@@ -1,0 +1,1 @@
+CMake-built static library exposing a four-function C FFI that wires the ASR→LLM→TTS pipeline, platform HAL, audio/latency monitors, and GGUF model loader behind a Dart-callable surface.

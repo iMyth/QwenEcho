@@ -1,0 +1,4 @@
+- Each requirement in `requirements.md` is numbered sequentially and cross-referenced by tasks via `_Requirements:` tags at the end of task descriptions.
+- Property-based tests are marked with an asterisk prefix (`*`) in `tasks.md` and explicitly tag which Property N from the design they validate.
+- The design document structures every component as a section with explicit Responsibilities, Design Decisions, and Interface subsections containing C/C++ typedef/struct declarations.
+- State machines (engine, thermal, sentence segmenter) are documented both as Mermaid diagrams and as enumerated state transitions with hysteresis thresholds.

@@ -1,0 +1,12 @@
+schema_version: 1
+module_path: ""
+title: QwenEcho — On-Device Simultaneous Interpretation App
+scope:
+    - README.md
+    - .gitignore
+    - analysis_options.yaml
+    - pubspec.yaml
+    - origin.png
+source_files: []
+depends_on: []
+related_to: []

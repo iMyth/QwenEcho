@@ -1,0 +1,1 @@
+Three independent, single-producer/single-consumer pipeline stages that consume audio segments, transcribe them via ASR, translate with a sliding-context LLM, and synthesize speech via TTS.

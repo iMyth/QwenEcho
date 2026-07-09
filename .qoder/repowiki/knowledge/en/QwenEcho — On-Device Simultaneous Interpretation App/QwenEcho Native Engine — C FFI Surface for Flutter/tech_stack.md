@@ -1,0 +1,1 @@
+C++17/C11 compiled to arm64-only static libraries for Android (NDK, linking `aaudio`, `android`, `log`) and iOS/macOS (Xcode toolchain); RapidCheck for property-based tests fetched at configure time; CocoaPods podspec for iOS distribution.

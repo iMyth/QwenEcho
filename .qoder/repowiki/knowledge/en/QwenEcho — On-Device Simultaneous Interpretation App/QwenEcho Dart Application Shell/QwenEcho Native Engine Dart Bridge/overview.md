@@ -1,0 +1,1 @@
+Dart-side bridge that FFI-loads the QwenEcho C engine, exposes a typed message stream over a Native Port, and manages its init/start/stop lifecycle.

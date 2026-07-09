@@ -1,0 +1,5 @@
+- Every public symbol is prefixed with `hal_` (e.g. `hal_accelerator_create`, `hal_audio_capture_start`) and declared inside an `extern "C"` block guarded by `#ifdef __cplusplus`.
+- Opaque handles are exposed as forward-declared structs (`typedef struct AcceleratorContext AcceleratorContext;`) and owned through paired create/destroy functions returning pointer-or-NULL.
+- Real-time callbacks use a `(data, count, user)` signature where `user` is a caller-supplied context pointer passed through from the corresponding start/register function.
+- Error reporting uses integer return codes (0 on success, negative on failure) rather than exceptions or out-parameters for status.
+- Platform variants share the same base filename across `android/` and `ios/` directories so each header maps one-to-one to its two implementations.
