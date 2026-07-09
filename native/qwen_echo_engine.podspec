@@ -43,12 +43,13 @@ Pod::Spec.new do |s|
     'third_party/lib/ios-sim/libggml-cpu.a',
   ]
 
-  # Force-load the engine static library so FFI symbols (called at runtime
-  # via Dart FFI dlsym, with no compile-time reference) are linked into the
-  # Runner binary. Disable dead code stripping as additional safety.
+  # Disable dead code stripping so FFI symbols (called at runtime via Dart FFI)
+  # and llama.cpp symbols are not stripped by the linker.
+  # Exclude x86_64 for simulator — llama.cpp pre-built libs are arm64 only.
   s.user_target_xcconfig = {
     'OTHER_LDFLAGS' => '$(inherited) -Wl,-force_load,${PODS_CONFIGURATION_BUILD_DIR}/qwen_echo_engine/libqwen_echo_engine.a',
     'DEAD_CODE_STRIPPING' => 'NO',
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'x86_64',
   }
 
   # ─── Frameworks ───────────────────────────────────────────────────────────

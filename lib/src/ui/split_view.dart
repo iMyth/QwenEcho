@@ -64,10 +64,11 @@ class SplitViewState extends State<SplitView> {
   /// Add a translation token to the opposing speaker's half.
   ///
   /// Speaker 0's translation appears in speaker 1's half and vice versa.
+  /// Tokens accumulate on the same line (typewriter effect).
   void addTranslation(int speakerId, String text) {
     // Translation from speaker X is displayed in the opposing half.
     final opposingState = _halfStateFor(speakerId == 0 ? 1 : 0);
-    opposingState?.addLine(text, kTranslationColor);
+    opposingState?.appendTranslationToken(text);
   }
 
   /// Clear both halves.

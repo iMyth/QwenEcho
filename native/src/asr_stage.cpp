@@ -35,7 +35,7 @@
 
 #ifdef __APPLE__
 #include <os/log.h>
-#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#define ECHO_LOG(fmt, ...) do { os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__); fprintf(stderr, fmt "\n", ##__VA_ARGS__); } while(0)
 #else
 #define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #endif
@@ -339,12 +339,19 @@ AsrStage* asr_stage_create(AcceleratorContext* accelerator,
     /* Initialize GGUF inference context if model path is provided */
     stage->gguf_ctx = nullptr;
     if (model_path && model_path[0] != '\0') {
-        stage->gguf_ctx = gguf_inference_create(model_path, 512, 4);
+        ECHO_LOG("[ASR] Loading GGUF model: %{public}s", model_path);
+        stage->gguf_ctx = gguf_inference_create(model_path, 2048, 4);
         if (stage->gguf_ctx) {
-            ECHO_LOG("[ASR] GGUF model loaded: %{public}s", model_path);
+            ECHO_LOG("[ASR] GGUF model loaded successfully: %{public}s", model_path);
+            native_port_post_error(0, "ASR", "GGUF model loaded OK");
         } else {
-            ECHO_LOG("[ASR] Failed to load GGUF model, using stub mode: %{public}s", model_path);
+            ECHO_LOG("[ASR] ERROR: Failed to load GGUF model, using stub mode: %{public}s", model_path);
+            native_port_post_error(-100, "ASR", "GGUF load FAILED (stub mode)");
         }
+    } else {
+        ECHO_LOG("[ASR] No model path provided, using stub mode (path=%{public}s)",
+                 model_path ? model_path : "(null)");
+        native_port_post_error(-100, "ASR", "No model path (stub mode)");
     }
 
     /* Launch worker thread */

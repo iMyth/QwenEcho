@@ -36,7 +36,7 @@
 
 #ifdef __APPLE__
 #include <os/log.h>
-#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#define ECHO_LOG(fmt, ...) do { os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__); fprintf(stderr, fmt "\n", ##__VA_ARGS__); } while(0)
 #else
 #define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #endif
@@ -220,7 +220,7 @@ static std::vector<std::string> real_translate_tokens(
 
     if (n > 0) {
         std::string text(output, static_cast<size_t>(n));
-        ECHO_LOG("[LLM] Translation result: %{public}s", text.c_str());
+        ECHO_LOG("[LLM] Translation result (%d bytes): %{public}s", n, text.c_str());
 
         /* Tokenize by whitespace for streaming */
         std::string word;
@@ -232,7 +232,7 @@ static std::vector<std::string> real_translate_tokens(
         }
         if (!word.empty()) tokens.push_back(word);
     } else {
-        ECHO_LOG("[LLM] Real inference failed, returning stub");
+        ECHO_LOG("[LLM] Real inference returned %d, using stub", n);
         tokens.emplace_back("[T]");
         tokens.push_back(input_text);
     }
@@ -429,9 +429,14 @@ LlmStage* llm_stage_create(AcceleratorContext* accelerator,
         stage->gguf_ctx = gguf_inference_create(model_path, 2048, 4);
         if (stage->gguf_ctx) {
             ECHO_LOG("[LLM] GGUF model loaded: %{public}s", model_path);
+            native_port_post_error(0, "LLM", "GGUF model loaded OK");
         } else {
             ECHO_LOG("[LLM] Failed to load GGUF model, using stub mode: %{public}s", model_path);
+            native_port_post_error(-100, "LLM", "GGUF load FAILED (stub mode)");
         }
+    } else {
+        ECHO_LOG("[LLM] No model path, using stub mode");
+        native_port_post_error(-100, "LLM", "No model path (stub mode)");
     }
 
     /* Launch worker thread */

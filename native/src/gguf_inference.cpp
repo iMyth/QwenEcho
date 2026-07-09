@@ -18,7 +18,7 @@
 
 #ifdef __APPLE__
 #include <os/log.h>
-#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#define ECHO_LOG(fmt, ...) do { os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__); fprintf(stderr, fmt "\n", ##__VA_ARGS__); } while(0)
 #else
 #define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #endif
@@ -56,18 +56,36 @@ void gguf_inference_backend_free(void) {
 
 GgufContext* gguf_inference_create(const char* model_path,
                                     int n_ctx, int n_threads) {
-    if (!model_path) return nullptr;
+    if (!model_path) {
+        ECHO_LOG("[GgufInference] NULL model_path");
+        return nullptr;
+    }
+
+    /* Verify file exists and is readable */
+    FILE* f = fopen(model_path, "rb");
+    if (!f) {
+        ECHO_LOG("[GgufInference] Cannot open file: %{public}s (errno=%d)",
+                 model_path, errno);
+        return nullptr;
+    }
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fclose(f);
+    ECHO_LOG("[GgufInference] File size: %ld bytes (%.1f MB): %{public}s",
+             file_size, file_size / (1024.0 * 1024.0), model_path);
 
     /* --- Load model --- */
     llama_model_params mparams = llama_model_default_params();
     /* Use mmap for efficient memory usage on mobile */
     mparams.use_mmap = true;
 
+    ECHO_LOG("[GgufInference] Calling llama_model_load_from_file...");
     llama_model* model = llama_model_load_from_file(model_path, mparams);
     if (!model) {
-        ECHO_LOG("[GgufInference] Failed to load model: %{public}s", model_path);
+        ECHO_LOG("[GgufInference] llama_model_load_from_file FAILED: %{public}s", model_path);
         return nullptr;
     }
+    ECHO_LOG("[GgufInference] Model loaded from file successfully");
 
     /* --- Create context --- */
     llama_context_params cparams = llama_context_default_params();

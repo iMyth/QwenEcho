@@ -68,12 +68,22 @@ class EchoEngine {
     required String llmPath,
     required String ttsPath,
   }) {
+    print('[EchoEngine] Initializing with models:');
+    print('[EchoEngine]   ASR: $asrPath');
+    print('[EchoEngine]   LLM: $llmPath');
+    print('[EchoEngine]   TTS: $ttsPath');
+
     // Initialize the Dart API DL subsystem so native code can post messages.
     _bridge.initDartApiDL();
+    print('[EchoEngine] Dart API DL initialized');
 
     // Register port so the engine can send init status messages.
     _portManager.register();
+    print('[EchoEngine] Native port registered');
+
     _bridge.initEngine(asrPath, llmPath, ttsPath);
+    print('[EchoEngine] Native engine initialized (models loaded)');
+
     _state = EchoEngineState.ready;
   }
 
@@ -85,7 +95,9 @@ class EchoEngine {
   /// Throws [EchoEngineException] on failure (e.g. unsupported language,
   /// engine not ready, session already active).
   void start({required String srcLang, required String tgtLang}) {
+    print('[EchoEngine] Starting pipeline: $srcLang \u2192 $tgtLang');
     _bridge.startPipeline(srcLang, tgtLang);
+    print('[EchoEngine] Pipeline started');
     _state = EchoEngineState.running;
   }
 

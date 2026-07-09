@@ -81,7 +81,7 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
         llmPath: paths[ModelKind.llm]!,
         ttsPath: paths[ModelKind.tts]!,
       );
-      setState(() => _statusText = 'Ready ($_srcLang→$_tgtLang) — tap mic');
+      setState(() => _statusText = 'Ready ($_srcLang\u2192$_tgtLang) \u2014 tap mic');
     } catch (e) {
       setState(() => _statusText = 'Init failed: $e');
     }

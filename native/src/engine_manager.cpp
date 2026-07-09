@@ -18,9 +18,9 @@
 
 #ifdef __APPLE__
 #include <os/log.h>
-#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#define ECHO_LOG(fmt, ...) do { os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__); fprintf(stderr, fmt "\n", ##__VA_ARGS__); } while(0)
 #else
-#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #endif
 
 /* ─── EngineManager struct definition ────────────────────────────────────── */

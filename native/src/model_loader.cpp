@@ -12,14 +12,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <fcntl.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #ifdef __APPLE__
 #include <os/log.h>
-#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#define ECHO_LOG(fmt, ...) do { os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__); fprintf(stderr, fmt "\n", ##__VA_ARGS__); } while(0)
 #else
 #define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #endif
@@ -36,12 +34,9 @@ struct InferenceContext {
 /* ─── Per-model slot ─────────────────────────────────────────────────────── */
 struct ModelSlot {
     int       loaded;          /* 1 = active, 0 = empty */
-    int       fd;             /* File descriptor (kept open while mapped) */
-    void*     mapped_data;    /* mmap base pointer */
     size_t    file_size;      /* File size from stat */
-    size_t    mapped_size;    /* Size of the mmap region (== file_size) */
     InferenceContext* ctx;    /* Inference context for this model */
-    char      path[1024];     /* File path (kept for stage model loading) */
+    char      path[1024];     /* File path (for stage model loading via llama.cpp) */
 };
 
 /* ─── ModelLoader aggregate ──────────────────────────────────────────────── */
@@ -143,53 +138,6 @@ static size_t gguf_meta_value_size(uint32_t vtype) {
 }
 
 /**
- * Skip a single metadata value in a GGUF file buffer.
- *
- * @param data   Pointer to start of file data.
- * @param offset Current byte offset into the data (updated on return).
- * @param size   Total size of the data buffer.
- * @param vtype  The value type to skip.
- * @return 0 on success, -1 if data is truncated.
- */
-static int skip_meta_value(const uint8_t* data, size_t* offset, size_t size, uint32_t vtype) {
-    size_t scalar_sz = gguf_meta_value_size(vtype);
-    if (scalar_sz > 0) {
-        if (*offset + scalar_sz > size) return -1;
-        *offset += scalar_sz;
-        return 0;
-    }
-
-    if (vtype == GGUF_META_STRING) {
-        /* String: uint64 length + bytes */
-        if (*offset + 8 > size) return -1;
-        uint64_t slen;
-        memcpy(&slen, data + *offset, 8);
-        *offset += 8;
-        if (*offset + slen > size) return -1;
-        *offset += (size_t)slen;
-        return 0;
-    }
-
-    if (vtype == GGUF_META_ARRAY) {
-        /* Array: uint32 elem_type + uint64 count + count * elem_size */
-        if (*offset + 4 + 8 > size) return -1;
-        uint32_t elem_type;
-        memcpy(&elem_type, data + *offset, 4);
-        *offset += 4;
-        uint64_t count;
-        memcpy(&count, data + *offset, 8);
-        *offset += 8;
-
-        for (uint64_t i = 0; i < count; i++) {
-            if (skip_meta_value(data, offset, size, elem_type) != 0) return -1;
-        }
-        return 0;
-    }
-
-    return -1; /* Unknown type */
-}
-
-/**
  * Map a llama.cpp `general.file_type` (ftype) value to the equivalent
  * per-tensor ggml type, so downstream validation uses a single enum.
  *
@@ -223,90 +171,120 @@ static uint32_t ftype_to_ggml_type(uint32_t ftype) {
  *      is an accepted quantization. This inherently skips F32/F16 norm & bias
  *      tensors and any non-accepted precision (e.g. BF16 conv weights).
  *
- * @param data      Memory-mapped file data.
- * @param size      File size.
+ * Uses read()-based I/O instead of mmap to avoid double-mapping files
+ * that llama.cpp will mmap itself during model loading.
+ *
+ * @param fd        Open file descriptor (read-only).
  * @param out_quant Output: the determined quantization type (ggml enum).
  * @return 0 on success, -1 on parse error or no quantized tensor found.
  */
-static int gguf_determine_quant_type(const uint8_t* data, size_t size,
-                                     uint32_t* out_quant) {
-    if (size < sizeof(GgufHeader)) return -1;
-
+static int gguf_determine_quant_type_fd(int fd, uint32_t* out_quant) {
+    /* Read header from the beginning of the file */
     GgufHeader header;
-    memcpy(&header, data, sizeof(GgufHeader));
+    if (pread(fd, &header, sizeof(GgufHeader), 0) != sizeof(GgufHeader)) {
+        return -1;
+    }
+
+    if (header.magic != GGUF_MAGIC) {
+        return -1;
+    }
 
     size_t offset = sizeof(GgufHeader);
     int found_file_type = 0;
 
     /* ── Phase 1: Parse metadata KV pairs, look for general.file_type ───── */
     for (uint64_t i = 0; i < header.metadata_kv_count; i++) {
-        /* Key */
-        if (offset + 8 > size) return -1;
+        /* Key length */
         uint64_t key_len;
-        memcpy(&key_len, data + offset, 8);
+        if (pread(fd, &key_len, 8, offset) != 8) return -1;
         offset += 8;
-        if (offset + key_len > size) return -1;
 
-        const char* key = (const char*)(data + offset);
+        /* Key bytes */
+        char key_buf[256];
         size_t key_sz = (size_t)key_len;
-        offset += (size_t)key_len;
+        if (key_sz > sizeof(key_buf)) {
+            /* Key too long — skip it */
+            offset += key_sz;
+            /* Read value type to skip value */
+            uint32_t vtype;
+            if (pread(fd, &vtype, 4, offset) != 4) return -1;
+            offset += 4;
+            /* Skip value using a temporary buffer approach */
+            /* For very long keys, just skip — we only care about known short keys */
+            continue;
+        }
+        if (pread(fd, key_buf, key_sz, offset) != (ssize_t)key_sz) return -1;
+        offset += key_sz;
 
         /* Value type */
-        if (offset + 4 > size) return -1;
         uint32_t vtype;
-        memcpy(&vtype, data + offset, 4);
+        if (pread(fd, &vtype, 4, offset) != 4) return -1;
         offset += 4;
 
         /* Check if this is general.file_type (uint32 value) */
         if (!found_file_type &&
             key_sz == 17 &&
-            memcmp(key, "general.file_type", 17) == 0 &&
+            memcmp(key_buf, "general.file_type", 17) == 0 &&
             vtype == GGUF_META_UINT32) {
-            if (offset + 4 > size) return -1;
             uint32_t file_type;
-            memcpy(&file_type, data + offset, 4);
+            if (pread(fd, &file_type, 4, offset) != 4) return -1;
             *out_quant = ftype_to_ggml_type(file_type);
             found_file_type = 1;
-            /* Don't return yet — we still need to skip remaining metadata */
         }
 
-        /* Skip the value */
-        if (skip_meta_value(data, &offset, size, vtype) != 0) return -1;
+        /* Skip the value — we need to read enough to skip variable-length types */
+        if (vtype == GGUF_META_STRING) {
+            uint64_t slen;
+            if (pread(fd, &slen, 8, offset) != 8) return -1;
+            offset += 8 + (size_t)slen;
+        } else if (vtype == GGUF_META_ARRAY) {
+            uint32_t elem_type;
+            uint64_t count;
+            if (pread(fd, &elem_type, 4, offset) != 4) return -1;
+            offset += 4;
+            if (pread(fd, &count, 8, offset) != 8) return -1;
+            offset += 8;
+            /* For arrays of strings, we must iterate to compute total skip */
+            for (uint64_t j = 0; j < count; j++) {
+                if (elem_type == GGUF_META_STRING) {
+                    uint64_t slen;
+                    if (pread(fd, &slen, 8, offset) != 8) return -1;
+                    offset += 8 + (size_t)slen;
+                } else {
+                    size_t sz = gguf_meta_value_size(elem_type);
+                    if (sz == 0) return -1;
+                    offset += sz;
+                }
+            }
+        } else {
+            size_t sz = gguf_meta_value_size(vtype);
+            if (sz == 0) return -1;
+            offset += sz;
+        }
     }
 
     if (found_file_type) return 0;
 
     /* ── Phase 2: Scan tensors for the first quantized weight ───────────── */
-    /* No general.file_type (e.g. mixed-precision ASR/TTS). Find the first
-     * tensor whose ggml type is an accepted quantization; this inherently
-     * skips F32/F16 norm & bias tensors and any non-accepted precision. */
     if (header.tensor_count == 0) return -1;
 
     for (uint64_t t = 0; t < header.tensor_count; t++) {
         /* name length + name bytes */
-        if (offset + 8 > size) return -1;
         uint64_t name_len;
-        memcpy(&name_len, data + offset, 8);
-        offset += 8;
-        if (offset + name_len > size) return -1;
-        offset += (size_t)name_len;
+        if (pread(fd, &name_len, 8, offset) != 8) return -1;
+        offset += 8 + (size_t)name_len;
 
-        /* n_dims + dims array */
-        if (offset + 4 > size) return -1;
+        /* n_dims */
         uint32_t n_dims;
-        memcpy(&n_dims, data + offset, 4);
-        offset += 4;
-        if (offset + (size_t)n_dims * 8 > size) return -1;
-        offset += (size_t)n_dims * 8;
+        if (pread(fd, &n_dims, 4, offset) != 4) return -1;
+        offset += 4 + (size_t)n_dims * 8;
 
         /* tensor type */
-        if (offset + 4 > size) return -1;
         uint32_t tensor_type;
-        memcpy(&tensor_type, data + offset, 4);
+        if (pread(fd, &tensor_type, 4, offset) != 4) return -1;
         offset += 4;
 
         /* tensor data offset */
-        if (offset + 8 > size) return -1;
         offset += 8;
 
         if (is_accepted_quant(tensor_type)) {
@@ -315,7 +293,6 @@ static int gguf_determine_quant_type(const uint8_t* data, size_t size,
         }
     }
 
-    /* No quantized tensor found — model is F32/F16 only. */
     return -1;
 }
 
@@ -357,10 +334,7 @@ ModelLoader* model_loader_create(void) {
 
     for (int i = 0; i < 3; i++) {
         loader->slots[i].loaded = 0;
-        loader->slots[i].fd = -1;
-        loader->slots[i].mapped_data = MAP_FAILED;
         loader->slots[i].file_size = 0;
-        loader->slots[i].mapped_size = 0;
         loader->slots[i].ctx = nullptr;
         loader->slots[i].path[0] = '\0';
     }
@@ -381,6 +355,7 @@ int model_loader_load(ModelLoader* loader, const char* path, ModelType type) {
     /* Step 1: Check file exists */
     struct stat st;
     if (stat(path, &st) != 0) {
+        ECHO_LOG("[ModelLoader] stat failed for: %s (errno=%d)", path, errno);
         if (errno == ENOENT || errno == ENOTDIR) {
             return ECHO_ERR_MODEL_MISSING;
         }
@@ -389,77 +364,76 @@ int model_loader_load(ModelLoader* loader, const char* path, ModelType type) {
 
     /* Step 2: Check file is readable */
     if (access(path, R_OK) != 0) {
+        ECHO_LOG("[ModelLoader] access denied: %s", path);
         return ECHO_ERR_MODEL_PERMISSION;
     }
 
     /* Ensure it's a regular file with non-zero size */
     if (!S_ISREG(st.st_mode) || st.st_size == 0) {
+        ECHO_LOG("[ModelLoader] not a regular file or empty: %s", path);
         return ECHO_ERR_MODEL_INVALID;
     }
 
     size_t file_size = static_cast<size_t>(st.st_size);
 
-    /* Step 3: Open file and read GGUF magic */
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) {
+    /* Step 3: Open file and validate GGUF header via read() I/O.
+     * We do NOT mmap the file here — llama.cpp will mmap it during
+     * gguf_inference_create() / llama_model_load_from_file().
+     * Double-mapping large files (1GB+) on iOS causes memory pressure
+     * and mmap failures. */
+    FILE* fp = fopen(path, "rb");
+    if (!fp) {
+        ECHO_LOG("[ModelLoader] fopen failed: %s (errno=%d)", path, errno);
         if (errno == EACCES) return ECHO_ERR_MODEL_PERMISSION;
         return ECHO_ERR_MODEL_MISSING;
     }
 
     /* Must have at least a header */
     if (file_size < sizeof(GgufHeader)) {
-        close(fd);
+        fclose(fp);
         return ECHO_ERR_MODEL_INVALID;
     }
 
     /* Read the header to validate magic */
     GgufHeader header;
-    ssize_t nread = read(fd, &header, sizeof(GgufHeader));
-    if (nread != static_cast<ssize_t>(sizeof(GgufHeader))) {
-        close(fd);
+    if (fread(&header, 1, sizeof(GgufHeader), fp) != sizeof(GgufHeader)) {
+        fclose(fp);
         return ECHO_ERR_MODEL_INVALID;
     }
 
     if (header.magic != GGUF_MAGIC) {
-        close(fd);
+        ECHO_LOG("[ModelLoader] bad GGUF magic: 0x%08X (expected 0x%08X)",
+                 header.magic, GGUF_MAGIC);
+        fclose(fp);
         return ECHO_ERR_MODEL_INVALID;
     }
 
-    /* Step 5: Memory-map the file */
-    void* mapped = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (mapped == MAP_FAILED) {
-        close(fd);
-        return ECHO_ERR_MEMORY;
-    }
-
-    /* Advise the kernel for sequential access (optional, best-effort) */
-    madvise(mapped, file_size, MADV_SEQUENTIAL);
-
-    /* Step 4: Determine quantization type and validate */
+    /* Step 4: Determine quantization type and validate using fd-based parsing */
+    int fd = fileno(fp);
     uint32_t quant_type = 0;
-    int parse_result = gguf_determine_quant_type(
-        static_cast<const uint8_t*>(mapped), file_size, &quant_type);
+    int parse_result = gguf_determine_quant_type_fd(fd, &quant_type);
+    fclose(fp);  /* Close file — llama.cpp will open it again */
+    fp = nullptr;
 
-    if (parse_result != 0 || !is_accepted_quant(quant_type)) {
-        munmap(mapped, file_size);
-        close(fd);
+    if (parse_result != 0) {
+        ECHO_LOG("[ModelLoader] failed to determine quant type: %s", path);
         return ECHO_ERR_MODEL_INVALID;
     }
 
-    /* Step 6: Create inference context */
+    if (!is_accepted_quant(quant_type)) {
+        ECHO_LOG("[ModelLoader] rejected quant type %u: %s", quant_type, path);
+        return ECHO_ERR_MODEL_INVALID;
+    }
+
+    /* Step 5: Create placeholder inference context */
     InferenceContext* ctx = create_inference_context(type, file_size);
     if (!ctx) {
-        munmap(mapped, file_size);
-        close(fd);
         return ECHO_ERR_MEMORY;
     }
 
     /* Populate the slot */
     slot->loaded = 1;
-    slot->fd = fd;
-    slot->mapped_data = mapped;
     slot->file_size = file_size;
-    slot->mapped_size = file_size;
     slot->ctx = ctx;
 
     /* Store path for later retrieval by pipeline stages */
@@ -468,8 +442,8 @@ int model_loader_load(ModelLoader* loader, const char* path, ModelType type) {
 
     const char* type_name = (type == MODEL_TYPE_ASR) ? "ASR" :
                             (type == MODEL_TYPE_LLM) ? "LLM" : "TTS";
-    ECHO_LOG("[Model Loader] %{public}s model loaded: %zu bytes, quant=%u",
-             type_name, file_size, quant_type);
+    ECHO_LOG("[ModelLoader] %s model validated: %zu bytes (%.1f MB), quant=%u, path=%s",
+             type_name, file_size, file_size / (1024.0 * 1024.0), quant_type, path);
 
     return ECHO_OK;
 }
@@ -488,8 +462,8 @@ ModelInfo model_loader_get_info(const ModelLoader* loader, ModelType type) {
 
     if (slot->loaded) {
         info.file_size = slot->file_size;
-        /* Memory usage = mapped region + inference context memory */
-        info.memory_usage = slot->mapped_size;
+        /* Memory usage = inference context memory (llama.cpp manages its own mmap) */
+        info.memory_usage = slot->file_size;  /* file will be mmap'd by llama.cpp */
         if (slot->ctx) {
             info.memory_usage += slot->ctx->context_memory;
         }
@@ -538,21 +512,8 @@ void model_loader_unload(ModelLoader* loader, ModelType type) {
         slot->ctx = nullptr;
     }
 
-    /* Unmap file */
-    if (slot->mapped_data != MAP_FAILED && slot->mapped_data != nullptr) {
-        munmap(slot->mapped_data, slot->mapped_size);
-        slot->mapped_data = MAP_FAILED;
-    }
-
-    /* Close file descriptor */
-    if (slot->fd >= 0) {
-        close(slot->fd);
-        slot->fd = -1;
-    }
-
     slot->loaded = 0;
     slot->file_size = 0;
-    slot->mapped_size = 0;
     slot->path[0] = '\0';
 }
 

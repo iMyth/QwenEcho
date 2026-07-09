@@ -27,7 +27,7 @@ SPEC CHECKSUMS:
   file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
-  qwen_echo_engine: a7972d80831e127955f104b2c282d50a6d79e841
+  qwen_echo_engine: 93d19d4b46c26e96590b8b77663161c1de00e54c
 
 PODFILE CHECKSUM: 63b152a64e46ea583046733e772ca3e030cec96f
 
