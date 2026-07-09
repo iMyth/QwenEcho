@@ -1,0 +1,5 @@
+- Opaque handles are allocated with `calloc(1, sizeof(...))` and C++ members constructed in-place via placement-new, destroyed explicitly with `~Type()` before `free()`.
+- All public functions begin with null-pointer checks and return `ECHO_ERR_*` codes rather than throwing exceptions.
+- Mutating paths acquire `std::lock_guard<std::mutex>` over the handle's internal mutex; read-only getters like `engine_manager_get_state` access fields without locking.
+- Cross-platform logging is funneled through a single `ECHO_LOG` macro that maps to `os_log` on `__APPLE__` and `fprintf(stderr, ...)` otherwise.
+- Graceful teardown follows reverse-pipeline order (TTS → LLM → ASR → segmenter → collector → queues → ring buffer → accelerator) inside a shared `destroy_*_resources` helper.

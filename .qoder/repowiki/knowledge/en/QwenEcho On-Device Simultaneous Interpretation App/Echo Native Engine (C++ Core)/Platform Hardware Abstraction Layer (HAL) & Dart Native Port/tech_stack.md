@@ -1,0 +1,1 @@
+Pure C ABI headers compiled against the Dart Embedding API via `dart_api_dl.h` (dynamic loader) so the same binary works across Dart versions; platform-specific code links AAudio/NNAPI/Vulkan on Android and AVAudioEngine/CoreML/Metal on iOS.

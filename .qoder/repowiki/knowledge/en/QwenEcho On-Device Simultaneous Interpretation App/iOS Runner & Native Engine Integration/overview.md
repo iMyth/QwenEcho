@@ -1,0 +1,1 @@
+iOS application host that boots the Flutter engine, registers Dart plugins, and links a local C/C++ native engine (qwen_echo_engine) for Dart FFI-based inference.

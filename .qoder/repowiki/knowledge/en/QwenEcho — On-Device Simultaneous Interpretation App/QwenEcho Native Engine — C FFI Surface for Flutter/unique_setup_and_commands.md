@@ -1,1 +1,0 @@
-Build with CMake ≥ 3.20 targeting arm64; enable tests via `-DQWEN_ECHO_BUILD_TESTS=ON` which pulls RapidCheck automatically and produces one executable per `tests/test_*.cpp` file runnable via `ctest`.

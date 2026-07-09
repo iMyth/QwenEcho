@@ -1,0 +1,1 @@
+C++ native core that wires ASR→LLM→TTS pipeline stages around a shared llama.cpp GGUF inference backend, exposing a C API to Dart via platform HALs and monitors.

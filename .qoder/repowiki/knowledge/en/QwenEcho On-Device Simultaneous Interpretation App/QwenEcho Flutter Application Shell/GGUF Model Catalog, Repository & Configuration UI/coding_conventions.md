@@ -1,0 +1,4 @@
+- Immutable value objects (`ModelSpec`, `ModelStatus`, `ModelImportProgress`) are declared as `const` constructors with final fields and exposed through a small set of convenience getters (`isReady`, `exceedsSizeLimit`, `fraction`).
+- Long-running operations return streams rather than blocking futures — `importModel` yields `ModelImportProgress` events so callers can drive UI progress without holding large files in memory.
+- User-facing errors are wrapped in domain-specific exceptions (`ModelImportException`) instead of throwing generic `Exception`/`Error`, and the UI catches them to show contextual `SnackBar` messages.
+- Platform-specific fallbacks are gated behind explicit platform checks (`Platform.isIOS && Platform.isMacOS`) returning `null` when unavailable, keeping cross-platform code uniform.

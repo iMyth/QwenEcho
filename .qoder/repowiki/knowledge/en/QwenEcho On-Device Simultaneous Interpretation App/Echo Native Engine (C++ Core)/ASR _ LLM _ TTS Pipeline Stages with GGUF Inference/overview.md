@@ -1,0 +1,1 @@
+Three C++ pipeline stages (speech-to-text, translation, text-to-speech) that consume bounded queues and perform real-time inference via a shared llama.cpp GGUF wrapper.

@@ -1,0 +1,3 @@
+- Public functions follow a C-style handle pattern: an opaque struct pointer plus separate init/create/destroy/reset/free lifecycle calls rather than RAII objects.
+- Error paths return negative integers and log via the `ECHO_LOG` macro (which maps to `os_log` on Apple platforms and `fprintf(stderr)` otherwise), never throwing exceptions.
+- Buffer overflows are handled defensively by checking return sizes from llama.cpp APIs and truncating with a trailing NUL instead of aborting.

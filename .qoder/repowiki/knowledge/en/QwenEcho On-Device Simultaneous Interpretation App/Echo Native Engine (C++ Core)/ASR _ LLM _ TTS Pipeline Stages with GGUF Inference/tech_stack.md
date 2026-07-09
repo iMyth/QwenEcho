@@ -1,0 +1,1 @@
+llama.cpp GGUF models loaded through a thin `gguf_inference` wrapper; audio I/O via HAL accelerator abstraction; inter-stage channels are hand-rolled bounded single-producer/single-consumer queues backed by `std::mutex`/`std::condition_variable` and lock-free `try_pop` variants.

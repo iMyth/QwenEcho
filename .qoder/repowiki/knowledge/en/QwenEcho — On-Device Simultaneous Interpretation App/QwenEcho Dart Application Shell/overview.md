@@ -1,1 +1,0 @@
-Flutter application shell that wires the native EchoEngine FFI bridge to a split-screen interpretation UI, publishing typed messages on a shared stream consumed by both the view and status overlays.

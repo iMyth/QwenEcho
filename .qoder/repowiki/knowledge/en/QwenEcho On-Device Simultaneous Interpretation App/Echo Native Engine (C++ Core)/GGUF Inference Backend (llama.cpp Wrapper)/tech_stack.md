@@ -1,0 +1,1 @@
+llama.cpp (git submodule under `native/third_party/llama.cpp`) providing the GGUF model loader, tokenizer, KV-cache engine, and sampler chain; platform logging falls back to `os_log` on macOS and `fprintf(stderr)` elsewhere.

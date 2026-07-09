@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: dart_app/echo_engine_core
+title: QwenEcho Native Engine Dart Bridge
+scope:
+    - lib/src/echo_engine.dart
+    - lib/src/messages.dart
+    - lib/src/native_bridge.dart
+    - lib/src/port_manager.dart
+source_files: []
+depends_on: []
+related_to: []

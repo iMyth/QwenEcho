@@ -1,6 +1,0 @@
-This is a standard Flutter iOS app scaffold (`Runner/`) plus Flutter tooling artifacts (`Flutter/`, `Pods/`).
-- `Runner/AppDelegate.swift` extends `FlutterAppDelegate` and implements `FlutterImplicitEngineDelegate.didInitializeImplicitFlutterEngine`, where `GeneratedPluginRegistrant.register` wires all Dart plugins into the implicit engine.
-- `Runner/SceneDelegate.swift` extends `FlutterSceneDelegate`; `Info.plist` declares a single `UIWindowScene` whose delegate class is `$(PRODUCT_MODULE_NAME).SceneDelegate` and storyboard is `Main`, so UIKit hands control to Flutter's scene lifecycle.
-- `Flutter/Flutter.podspec` is a generated placeholder pointing at the Flutter engine git tag; real linking is done by Flutter tooling, not CocoaPods (commented in the spec).
-- `Podfile` pins `platform :ios, '16.0'`, disables CocoaPods analytics for build latency, calls `flutter_ios_podfile_setup` / `flutter_install_all_ios_pods`, and adds a local pod `qwen_echo_engine` from `../native` (compiled C/C++ sources) with `modular_headers => false` so its symbols are linked directly into the Runner binary for Dart FFI — explicitly avoiding `use_frameworks!` per the comment.
-- `Runner.xcodeproj` / `Runner.xcworkspace` are the generated Xcode project and workspace consumed by `flutter build ios` / `flutter run`.

@@ -1,0 +1,1 @@
+Defines the three required GGUF model specs and provides an air-gapped repository that imports, validates, and resolves their sandbox paths, surfaced by a Flutter configuration screen.

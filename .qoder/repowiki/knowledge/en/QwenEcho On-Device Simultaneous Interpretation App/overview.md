@@ -1,0 +1,1 @@
+Flutter app that wires a C++ native ASR→LLM→TTS inference pipeline via Dart FFI to a split-screen bilateral interpretation UI, running entirely offline with GGUF models.

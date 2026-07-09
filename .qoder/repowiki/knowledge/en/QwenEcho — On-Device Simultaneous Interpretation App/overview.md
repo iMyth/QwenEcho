@@ -1,1 +1,0 @@
-Root of the QwenEcho Flutter app that composes a Dart UI shell, a C/C++ native inference engine, and platform wrappers into an air-gapped bilateral interpretation product.

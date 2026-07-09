@@ -1,1 +1,0 @@
-Lock-free ring buffer, real-time audio capture collector with sample-drop detection, and per-stage E2E latency budget enforcement for the ASR→LLM→TTS pipeline.

@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: ios_platform
+title: iOS Runner & Native Engine Integration
+scope:
+    - ios/
+source_files: []
+depends_on: []
+related_to: []

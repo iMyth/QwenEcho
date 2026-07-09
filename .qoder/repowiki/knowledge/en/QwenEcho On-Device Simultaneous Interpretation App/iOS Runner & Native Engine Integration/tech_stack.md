@@ -1,0 +1,1 @@
+Swift + UIKit hosting Flutter on iOS 16+; CocoaPods for dependency management with a custom local pod (`qwen_echo_engine`) linked as a static library for Dart FFI; minimum deployment target iOS 13 (engine) / 16 (app); native inference layer built from llama.cpp pulled in as a git submodule under `../native`.

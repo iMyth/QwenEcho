@@ -1,9 +1,0 @@
-schema_version: 1
-module_path: dart_app/ui_layer
-title: Flutter Interpretation UI Shell
-scope:
-    - lib/src/ui/
-source_files: []
-depends_on: []
-related_to:
-    - path: dart_app/echo_engine_core

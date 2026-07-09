@@ -1,8 +1,0 @@
-schema_version: 1
-module_path: native_engine/platform_hal
-title: Platform Hardware Abstraction Layer (HAL)
-scope:
-    - native/hal/
-source_files: []
-depends_on: []
-related_to: []

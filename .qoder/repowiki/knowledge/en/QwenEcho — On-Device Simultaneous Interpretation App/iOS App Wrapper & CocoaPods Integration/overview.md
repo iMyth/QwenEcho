@@ -1,1 +1,0 @@
-iOS application wrapper that bootstraps the Flutter engine, registers plugins, and integrates a local native C/C++ engine pod with the Xcode project.

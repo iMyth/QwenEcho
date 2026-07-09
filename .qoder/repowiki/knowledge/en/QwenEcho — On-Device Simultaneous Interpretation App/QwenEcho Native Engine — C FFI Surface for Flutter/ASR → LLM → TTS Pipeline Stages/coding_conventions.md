@@ -1,6 +1,0 @@
-- Each stage exposes a C ABI wrapped in `extern "C" { ... }` so the host can link without name mangling.
-- Public constructors return a heap-allocated opaque handle created with `new (std::nothrow)` and validated against null before use.
-- Worker threads are signalled to stop by setting an `atomic<bool> running` flag followed by `join()`, ensuring deterministic teardown.
-- Inference logic is isolated in a `stub_*` helper function that takes an `AcceleratorContext*` parameter, allowing the real model to be swapped in without changing the worker loop.
-- SLA compliance is measured by capturing `steady_clock::now()` around the critical path and calling `native_port_post_latency_warning("STAGE", actual_ms, BUDGET)` when exceeded.
-- Text payloads are copied into fixed-size `char text[256]` buffers inside queue elements using `memcpy` + explicit NUL termination rather than passing `std::string` across queues.

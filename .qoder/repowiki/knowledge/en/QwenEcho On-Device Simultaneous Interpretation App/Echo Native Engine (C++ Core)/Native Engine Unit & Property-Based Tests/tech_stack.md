@@ -1,0 +1,1 @@
+C++17 with Google's RapidCheck for property-based testing; tests exercise GGUF model loading (magic `0x46554747`, INT4 quantization variants Q4_0/Q4_1/Q4_K) and construct minimal synthetic GGUF binaries via `mkstemp` + `/tmp/qwen_echo_test_*` to drive `model_loader` error paths.

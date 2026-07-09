@@ -1,1 +1,0 @@
-C API surface that owns the engine lifecycle (model loading, state machine) and orchestrates the ASR→LLM→TTS audio processing pipeline with graceful shutdown.

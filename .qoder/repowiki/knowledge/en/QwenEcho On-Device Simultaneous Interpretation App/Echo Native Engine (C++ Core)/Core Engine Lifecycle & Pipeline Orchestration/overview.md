@@ -1,0 +1,1 @@
+C API entry points that own the GGUF-backed ASR→LLM→TTS pipeline, managing model loading, state transitions, and graceful multi-stage shutdown.

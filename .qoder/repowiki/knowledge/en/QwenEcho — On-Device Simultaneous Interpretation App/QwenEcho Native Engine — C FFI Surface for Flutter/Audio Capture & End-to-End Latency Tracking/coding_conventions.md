@@ -1,4 +1,0 @@
-- Public C API uses opaque handles created by `*_create()` and destroyed by `*_destroy()`, with early null-pointer returns on every entry point.
-- Real-time paths use `std::atomic<T>` with explicit `memory_order_acquire`/`memory_order_release` semantics instead of `std::mutex`, documented in comments about which thread owns which field.
-- Constants are declared as `static constexpr` module-local variables (sample rate, channels, thresholds, max segments) rather than macros or globals.
-- Budget violations are reported uniformly through a single helper (`check_and_report`) that forwards to `native_port_post_latency_warning(stage, actual_ms, budget_ms)`.

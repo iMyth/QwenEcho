@@ -1,1 +1,0 @@
-Pure C headers compiled against Android NDK (AAudio, NNAPI 1.3+, Vulkan Compute, AThermal, `/proc/self/statm`, pthread SCHED_FIFO) and iOS SDK (AVAudioEngine input tap, CoreML 5+, Metal Performance Shaders, ProcessInfo.thermalState, task_info TASK_VM_INFO, pthread QoS).

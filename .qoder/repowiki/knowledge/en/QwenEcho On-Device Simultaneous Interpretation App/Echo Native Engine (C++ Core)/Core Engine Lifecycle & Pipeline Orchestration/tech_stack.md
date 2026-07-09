@@ -1,0 +1,1 @@
+C++17 with C ABI surface; llama.cpp integration through a local `gguf_inference.h` wrapper (backend init/free around model load/destroy); inter-stage communication via `BoundedSPSCQueue<T>`; platform logging via `os_log` on Apple targets.

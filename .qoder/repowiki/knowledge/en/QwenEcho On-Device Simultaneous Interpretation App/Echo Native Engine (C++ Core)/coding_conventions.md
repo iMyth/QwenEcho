@@ -1,0 +1,4 @@
+- Each subsystem exposes a flat header under `include/` with a matching `.cpp` under `src/`; cross-module dependencies go through these headers, never through sibling source files.
+- Platform-specific code lives under `hal/<android|ios>/` and is selected by preprocessor guards against `__ANDROID__` / `__APPLE__`, keeping the HAL surface identical across children.
+- Real-time stages consume and produce data via `bounded_spsc_queue<T>` from `shared_utilities`, avoiding locks inside the hot path.
+- All cross-language communication flows through the `NativePort` message bus (`native_port.h`) rather than direct callbacks, so monitors, stages, and the engine share one typed IPC contract.

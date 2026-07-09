@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: native_engine/platform_hal
+title: Platform Hardware Abstraction Layer (HAL) & Dart Native Port
+scope:
+    - native/hal/
+    - native/src/native_port.cpp
+source_files: []
+depends_on: []
+related_to: []

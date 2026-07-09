@@ -1,2 +1,0 @@
-- Cross-language boundaries are declared as plain-C headers under `native/include/` and consumed only through Dart FFI bindings in `lib/src/native_bridge.dart` — no C++ symbols leak across the boundary.
-- All inter-process communication between Dart and native code flows through a single typed `EchoMessage` protocol posted on a native port; neither side uses ad-hoc IPC paths.

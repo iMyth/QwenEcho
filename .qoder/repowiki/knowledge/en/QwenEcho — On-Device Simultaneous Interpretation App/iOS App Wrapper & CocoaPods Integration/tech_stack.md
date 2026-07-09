@@ -1,1 +1,0 @@
-Swift + UIKit hosting a Flutter iOS app; dependency management via CocoaPods with a custom local pod (`qwen_echo_engine`) linked as a static library for Dart FFI; minimum deployment target iOS 13 (engine) / 16 (app).
