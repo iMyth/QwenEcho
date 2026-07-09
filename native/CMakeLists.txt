@@ -26,6 +26,12 @@ add_compile_options(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/hal)
 
+# llama.cpp headers (for gguf_inference.cpp wrapper)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/llama.cpp/include")
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/llama.cpp/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/llama.cpp/ggml/include)
+endif()
+
 # ─── Source Files ────────────────────────────────────────────────────────────
 # Collect all source files (added incrementally as components are implemented)
 file(GLOB_RECURSE ENGINE_SOURCES
@@ -48,6 +54,31 @@ if(ENGINE_SOURCES)
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/hal
     )
+
+    # ─── llama.cpp pre-built libraries ──────────────────────────────────
+    set(LLAMA_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lib")
+    if(APPLE AND NOT ANDROID)
+        # iOS / macOS — use ios-sim or ios-device pre-built libs
+        set(LLAMA_LIB_PATH "${LLAMA_LIB_DIR}/ios-sim")
+    else()
+        set(LLAMA_LIB_PATH "${LLAMA_LIB_DIR}/host")
+    endif()
+
+    if(EXISTS "${LLAMA_LIB_PATH}/libllama.a")
+        target_link_libraries(qwen_echo_engine PUBLIC
+            ${LLAMA_LIB_PATH}/libllama.a
+            ${LLAMA_LIB_PATH}/libggml.a
+            ${LLAMA_LIB_PATH}/libggml-base.a
+            ${LLAMA_LIB_PATH}/libggml-cpu.a
+        )
+        # Accelerate framework for Apple platforms
+        if(APPLE)
+            find_library(ACCELERATE_FRAMEWORK Accelerate)
+            if(ACCELERATE_FRAMEWORK)
+                target_link_libraries(qwen_echo_engine PUBLIC ${ACCELERATE_FRAMEWORK})
+            endif()
+        endif()
+    endif()
 
     # ─── Android-specific Configuration ──────────────────────────────────────
     if(ANDROID)

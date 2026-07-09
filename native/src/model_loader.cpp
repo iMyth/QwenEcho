@@ -17,6 +17,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
+#endif
+
 /* ─── Internal inference context placeholder ─────────────────────────────────
  * In a full integration this would wrap the actual ggml_context.
  * For now it tracks the allocation size for memory reporting.
@@ -34,6 +41,7 @@ struct ModelSlot {
     size_t    file_size;      /* File size from stat */
     size_t    mapped_size;    /* Size of the mmap region (== file_size) */
     InferenceContext* ctx;    /* Inference context for this model */
+    char      path[1024];     /* File path (kept for stage model loading) */
 };
 
 /* ─── ModelLoader aggregate ──────────────────────────────────────────────── */
@@ -44,13 +52,30 @@ struct ModelLoader {
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
 /**
- * Check whether a GGUF quantization type is an accepted INT4 variant.
- * We accept Q4_0, Q4_1, and Q4_K as valid INT4 formats.
+ * Check whether a GGUF quantization type is accepted for on-device use.
+ *
+ * Accepted quants include:
+ *   - Legacy INT4:  Q4_0, Q4_1
+ *   - K-quants:     Q3_K, Q4_K, Q5_K, Q6_K  (mobile-friendly, good accuracy)
+ *   - IQ variants:  IQ4_NL, IQ4_XS          (importance-matrix 4-bit)
+ *
+ * We reject F16/F32 (too large for mobile memory budget) and Q2_K
+ * (quality too degraded for real-time interpretation).
  */
-static int is_int4_quant(uint32_t quant_type) {
-    return quant_type == GGUF_QUANT_Q4_0 ||
-           quant_type == GGUF_QUANT_Q4_1 ||
-           quant_type == GGUF_QUANT_Q4_K;
+static int is_accepted_quant(uint32_t quant_type) {
+    switch (quant_type) {
+        case GGUF_QUANT_Q4_0:
+        case GGUF_QUANT_Q4_1:
+        case GGUF_QUANT_Q3_K:
+        case GGUF_QUANT_Q4_K:
+        case GGUF_QUANT_Q5_K:
+        case GGUF_QUANT_Q6_K:
+        case GGUF_QUANT_IQ4_NL:
+        case GGUF_QUANT_IQ4_XS:
+            return 1;
+        default:
+            return 0;
+    }
 }
 
 /**
@@ -165,30 +190,65 @@ static int skip_meta_value(const uint8_t* data, size_t* offset, size_t size, uin
 }
 
 /**
- * Parse GGUF header and extract the first tensor's quantization type.
+ * Map a llama.cpp `general.file_type` (ftype) value to the equivalent
+ * per-tensor ggml type, so downstream validation uses a single enum.
+ *
+ * ftype and ggml_type share values for 0–3 and 10, but DIVERGE for 11+:
+ *   ftype 11/12/13 = Q3_K_S/M/L  →  ggml Q3_K (11)
+ *   ftype 14/15    = Q4_K_S/M    →  ggml Q4_K (12)
+ *   ftype 16/17    = Q5_K_S/M    →  ggml Q5_K (13)
+ *   ftype 18       = Q6_K        →  ggml Q6_K (14)
+ * Values outside this range (Q4_0=2, Q8_0=7, ...) pass through unchanged.
+ */
+static uint32_t ftype_to_ggml_type(uint32_t ftype) {
+    switch (ftype) {
+        case 11: case 12: case 13: return GGUF_QUANT_Q3_K;  /* Q3_K_S/M/L */
+        case 14: case 15:         return GGUF_QUANT_Q4_K;  /* Q4_K_S/M   */
+        case 16: case 17:         return GGUF_QUANT_Q5_K;  /* Q5_K_S/M   */
+        case 18:                   return GGUF_QUANT_Q6_K;  /* Q6_K       */
+        default:                   return ftype;            /* passthrough */
+    }
+}
+
+/**
+ * Determine the representative quantization type of a GGUF file.
+ *
+ * Strategy:
+ *   1. Read `general.file_type` from metadata — the canonical field that
+ *      conversion tools (llama.cpp/unsloth/bartowski) set to the predominant
+ *      quant type. It uses the llama.cpp ftype enum, normalized to the
+ *      per-tensor ggml type via ftype_to_ggml_type() before returning.
+ *   2. If `general.file_type` is absent (some mixed-precision ASR/TTS models
+ *      omit it), scan tensor descriptors for the first tensor whose ggml type
+ *      is an accepted quantization. This inherently skips F32/F16 norm & bias
+ *      tensors and any non-accepted precision (e.g. BF16 conv weights).
  *
  * @param data      Memory-mapped file data.
  * @param size      File size.
- * @param out_quant Output: quantization type of the first tensor.
- * @return 0 on success, -1 on parse error.
+ * @param out_quant Output: the determined quantization type (ggml enum).
+ * @return 0 on success, -1 on parse error or no quantized tensor found.
  */
-static int gguf_get_first_tensor_quant(const uint8_t* data, size_t size, uint32_t* out_quant) {
-    /* Header is already validated; skip it */
+static int gguf_determine_quant_type(const uint8_t* data, size_t size,
+                                     uint32_t* out_quant) {
     if (size < sizeof(GgufHeader)) return -1;
 
     GgufHeader header;
     memcpy(&header, data, sizeof(GgufHeader));
 
     size_t offset = sizeof(GgufHeader);
+    int found_file_type = 0;
 
-    /* Skip metadata key-value pairs */
+    /* ── Phase 1: Parse metadata KV pairs, look for general.file_type ───── */
     for (uint64_t i = 0; i < header.metadata_kv_count; i++) {
-        /* Key: uint64 name_len + name bytes */
+        /* Key */
         if (offset + 8 > size) return -1;
         uint64_t key_len;
         memcpy(&key_len, data + offset, 8);
         offset += 8;
         if (offset + key_len > size) return -1;
+
+        const char* key = (const char*)(data + offset);
+        size_t key_sz = (size_t)key_len;
         offset += (size_t)key_len;
 
         /* Value type */
@@ -197,41 +257,66 @@ static int gguf_get_first_tensor_quant(const uint8_t* data, size_t size, uint32_
         memcpy(&vtype, data + offset, 4);
         offset += 4;
 
-        /* Value */
+        /* Check if this is general.file_type (uint32 value) */
+        if (!found_file_type &&
+            key_sz == 17 &&
+            memcmp(key, "general.file_type", 17) == 0 &&
+            vtype == GGUF_META_UINT32) {
+            if (offset + 4 > size) return -1;
+            uint32_t file_type;
+            memcpy(&file_type, data + offset, 4);
+            *out_quant = ftype_to_ggml_type(file_type);
+            found_file_type = 1;
+            /* Don't return yet — we still need to skip remaining metadata */
+        }
+
+        /* Skip the value */
         if (skip_meta_value(data, &offset, size, vtype) != 0) return -1;
     }
 
-    /* Now at tensor info section. Read the first tensor's type.
-     * Tensor info: name_len(u64) + name(bytes) + n_dims(u32) + dims(u64*n_dims) + type(u32) + offset(u64) */
+    if (found_file_type) return 0;
+
+    /* ── Phase 2: Scan tensors for the first quantized weight ───────────── */
+    /* No general.file_type (e.g. mixed-precision ASR/TTS). Find the first
+     * tensor whose ggml type is an accepted quantization; this inherently
+     * skips F32/F16 norm & bias tensors and any non-accepted precision. */
     if (header.tensor_count == 0) return -1;
 
-    /* name length */
-    if (offset + 8 > size) return -1;
-    uint64_t name_len;
-    memcpy(&name_len, data + offset, 8);
-    offset += 8;
+    for (uint64_t t = 0; t < header.tensor_count; t++) {
+        /* name length + name bytes */
+        if (offset + 8 > size) return -1;
+        uint64_t name_len;
+        memcpy(&name_len, data + offset, 8);
+        offset += 8;
+        if (offset + name_len > size) return -1;
+        offset += (size_t)name_len;
 
-    /* name bytes */
-    if (offset + name_len > size) return -1;
-    offset += (size_t)name_len;
+        /* n_dims + dims array */
+        if (offset + 4 > size) return -1;
+        uint32_t n_dims;
+        memcpy(&n_dims, data + offset, 4);
+        offset += 4;
+        if (offset + (size_t)n_dims * 8 > size) return -1;
+        offset += (size_t)n_dims * 8;
 
-    /* n_dims */
-    if (offset + 4 > size) return -1;
-    uint32_t n_dims;
-    memcpy(&n_dims, data + offset, 4);
-    offset += 4;
+        /* tensor type */
+        if (offset + 4 > size) return -1;
+        uint32_t tensor_type;
+        memcpy(&tensor_type, data + offset, 4);
+        offset += 4;
 
-    /* dims array */
-    if (offset + (size_t)n_dims * 8 > size) return -1;
-    offset += (size_t)n_dims * 8;
+        /* tensor data offset */
+        if (offset + 8 > size) return -1;
+        offset += 8;
 
-    /* tensor type (the quantization type) */
-    if (offset + 4 > size) return -1;
-    uint32_t tensor_type;
-    memcpy(&tensor_type, data + offset, 4);
+        if (is_accepted_quant(tensor_type)) {
+            *out_quant = tensor_type;
+            return 0;
+        }
+    }
 
-    *out_quant = tensor_type;
-    return 0;
+    /* No quantized tensor found — model is F32/F16 only. */
+    return -1;
 }
 
 /**
@@ -277,6 +362,7 @@ ModelLoader* model_loader_create(void) {
         loader->slots[i].file_size = 0;
         loader->slots[i].mapped_size = 0;
         loader->slots[i].ctx = nullptr;
+        loader->slots[i].path[0] = '\0';
     }
     return loader;
 }
@@ -349,12 +435,12 @@ int model_loader_load(ModelLoader* loader, const char* path, ModelType type) {
     /* Advise the kernel for sequential access (optional, best-effort) */
     madvise(mapped, file_size, MADV_SEQUENTIAL);
 
-    /* Step 4: Validate INT4 quantization type from first tensor */
+    /* Step 4: Determine quantization type and validate */
     uint32_t quant_type = 0;
-    int parse_result = gguf_get_first_tensor_quant(
+    int parse_result = gguf_determine_quant_type(
         static_cast<const uint8_t*>(mapped), file_size, &quant_type);
 
-    if (parse_result != 0 || !is_int4_quant(quant_type)) {
+    if (parse_result != 0 || !is_accepted_quant(quant_type)) {
         munmap(mapped, file_size);
         close(fd);
         return ECHO_ERR_MODEL_INVALID;
@@ -375,6 +461,15 @@ int model_loader_load(ModelLoader* loader, const char* path, ModelType type) {
     slot->file_size = file_size;
     slot->mapped_size = file_size;
     slot->ctx = ctx;
+
+    /* Store path for later retrieval by pipeline stages */
+    strncpy(slot->path, path, sizeof(slot->path) - 1);
+    slot->path[sizeof(slot->path) - 1] = '\0';
+
+    const char* type_name = (type == MODEL_TYPE_ASR) ? "ASR" :
+                            (type == MODEL_TYPE_LLM) ? "LLM" : "TTS";
+    ECHO_LOG("[Model Loader] %{public}s model loaded: %zu bytes, quant=%u",
+             type_name, file_size, quant_type);
 
     return ECHO_OK;
 }
@@ -416,6 +511,19 @@ void* model_loader_get_context(ModelLoader* loader, ModelType type) {
     return static_cast<void*>(slot->ctx);
 }
 
+const char* model_loader_get_path(const ModelLoader* loader, ModelType type) {
+    if (!loader || type < MODEL_TYPE_ASR || type > MODEL_TYPE_TTS) {
+        return nullptr;
+    }
+
+    const ModelSlot* slot = &loader->slots[type];
+    if (!slot->loaded || slot->path[0] == '\0') {
+        return nullptr;
+    }
+
+    return slot->path;
+}
+
 void model_loader_unload(ModelLoader* loader, ModelType type) {
     if (!loader || type < MODEL_TYPE_ASR || type > MODEL_TYPE_TTS) {
         return;
@@ -445,6 +553,7 @@ void model_loader_unload(ModelLoader* loader, ModelType type) {
     slot->loaded = 0;
     slot->file_size = 0;
     slot->mapped_size = 0;
+    slot->path[0] = '\0';
 }
 
 void model_loader_destroy(ModelLoader* loader) {

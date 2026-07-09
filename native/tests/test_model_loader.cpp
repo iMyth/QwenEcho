@@ -27,7 +27,7 @@
 
 /**
  * Build a minimal valid GGUF binary with:
- *   - Correct magic (0x46475547)
+ *   - Correct magic (0x46554747)
  *   - Version 3
  *   - 1 tensor with the specified quant type
  *   - 0 metadata KV pairs

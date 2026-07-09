@@ -65,10 +65,23 @@ __attribute__((visibility("default")))
 int32_t StopEchoPipeline(void);
 
 /**
+ * Initialize the Dart API DL (Dynamic Loading) subsystem.
+ *
+ * Must be called before any other FFI function. Pass the value of
+ * NativeApi.initializeApiDLData from Dart.
+ *
+ * @param data  Opaque pointer from NativeApi.initializeApiDLData
+ * @return ECHO_OK (0) on success
+ */
+__attribute__((visibility("default")))
+int32_t InitDartApiDL(void* data);
+
+/**
  * Register a Dart Native Port for async message delivery.
  *
  * Establishes the communication channel for streaming results from the
  * Engine to the UI Shell. Replaces any previously registered port.
+ * Requires InitDartApiDL to have been called first.
  *
  * @param dart_port_id  The Dart SendPort ID for Native Port communication
  * @return ECHO_OK (0) on success

@@ -74,11 +74,16 @@ class PortManager {
   }
 
   void _handleRawMessage(dynamic raw) {
-    if (raw is! List) return;
+    if (raw is! List) {
+      print('[PortManager] Ignoring non-list message: ${raw.runtimeType}');
+      return;
+    }
 
     final message = EchoMessage.fromRawList(raw);
     if (message != null) {
       _messageController.add(message);
+    } else {
+      print('[PortManager] Failed to parse message: $raw');
     }
   }
 }

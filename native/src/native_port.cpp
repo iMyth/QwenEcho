@@ -6,11 +6,20 @@
  * port state since pipeline threads may post messages concurrently.
  */
 
+/* Include real Dart SDK headers FIRST so native_port.h skips its shim types */
+#include "dart_api_dl.h"
 #include "native_port.h"
 #include "echo_types.h"
 
 #include <atomic>
 #include <cstring>
+
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
+#endif
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -24,8 +33,10 @@ std::atomic<int64_t> g_port_id{0};
 /** Whether a port has been registered at least once. */
 std::atomic<bool> g_port_registered{false};
 
-/** Runtime-set function pointer for posting CObjects to a Dart port. */
-std::atomic<Dart_PostCObject_Type> g_post_fn{nullptr};
+/** Stored function pointer — uses Dart_PostCObject_DL by default.
+ *  Tests can override via native_port_set_post_fn(). */
+typedef bool (*PostFn)(int64_t, Dart_CObject*);
+std::atomic<PostFn> g_post_fn{nullptr};
 
 } // anonymous namespace
 
@@ -37,6 +48,7 @@ extern "C" {
 
 void native_port_register(int64_t port_id)
 {
+    ECHO_LOG("[NativePort] Registering port: %lld", (long long)port_id);
     g_port_id.store(port_id, std::memory_order_release);
     g_port_registered.store(true, std::memory_order_release);
 }
@@ -46,9 +58,13 @@ bool native_port_is_registered(void)
     return g_port_registered.load(std::memory_order_acquire);
 }
 
-void native_port_set_post_fn(Dart_PostCObject_Type post_fn)
+void native_port_set_post_fn(void)
 {
-    g_post_fn.store(post_fn, std::memory_order_release);
+    /* Default: use Dart_PostCObject_DL from the initialized Dart API DL */
+    g_post_fn.store(reinterpret_cast<PostFn>(Dart_PostCObject_DL),
+                     std::memory_order_release);
+    ECHO_LOG("[NativePort] Post function set: Dart_PostCObject_DL=%p",
+             (void*)Dart_PostCObject_DL);
 }
 
 // ---------------------------------------------------------------------------
@@ -57,21 +73,27 @@ void native_port_set_post_fn(Dart_PostCObject_Type post_fn)
 
 /**
  * Post a fully-constructed Dart_CObject to the registered port.
- * Returns false if no port is registered or no post function is set.
+ * Uses the stored function pointer (defaults to Dart_PostCObject_DL).
  */
 static bool post_message(Dart_CObject* message)
 {
     if (!g_port_registered.load(std::memory_order_acquire)) {
+        ECHO_LOG("[NativePort] post_message FAILED: no port registered");
         return false;
     }
 
-    Dart_PostCObject_Type fn = g_post_fn.load(std::memory_order_acquire);
+    PostFn fn = g_post_fn.load(std::memory_order_acquire);
     if (fn == nullptr) {
+        ECHO_LOG("[NativePort] post_message FAILED: post_fn is null");
         return false;
     }
 
     int64_t port = g_port_id.load(std::memory_order_acquire);
-    return fn(port, message);
+    bool ok = fn(port, message);
+    if (!ok) {
+        ECHO_LOG("[NativePort] post_message FAILED: Dart_PostCObject returned false");
+    }
+    return ok;
 }
 
 // ---------------------------------------------------------------------------

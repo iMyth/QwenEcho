@@ -7,6 +7,7 @@
  */
 
 #include "ffi_bridge.h"
+#include "dart_api_dl.h"
 #include "echo_types.h"
 #include "engine_manager.h"
 #include "native_port.h"
@@ -14,6 +15,13 @@
 #include <atomic>
 #include <cstring>
 #include <mutex>
+
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
+#endif
 
 // ---------------------------------------------------------------------------
 // File-scoped engine state singleton
@@ -106,6 +114,19 @@ int32_t StopEchoPipeline(void)
 }
 
 __attribute__((visibility("default")))
+int32_t InitDartApiDL(void* data)
+{
+    intptr_t result = Dart_InitializeApiDL(data);
+    if (result != 0) {
+        ECHO_LOG("[FFI] Dart_InitializeApiDL failed: %ld", (long)result);
+        return ECHO_ERR_NOT_INITIALIZED;
+    }
+    ECHO_LOG("[FFI] Dart API DL initialized, Dart_PostCObject_DL=%p",
+             (void*)Dart_PostCObject_DL);
+    return ECHO_OK;
+}
+
+__attribute__((visibility("default")))
 int32_t RegisterEchoMessagePort(int64_t dart_port_id)
 {
     std::lock_guard<std::mutex> lock(g_ffi_ctx.mutex);
@@ -113,6 +134,10 @@ int32_t RegisterEchoMessagePort(int64_t dart_port_id)
     /* Store the port, replacing any previously registered port */
     g_ffi_ctx.registered_port.store(dart_port_id, std::memory_order_release);
     g_ffi_ctx.port_registered.store(true, std::memory_order_release);
+
+    /* Mark post function as ready — Dart_PostCObject_DL is already
+     * initialized by Dart_InitializeApiDL called from Dart side */
+    native_port_set_post_fn();
 
     /* Forward to native_port module for message dispatch */
     native_port_register(dart_port_id);

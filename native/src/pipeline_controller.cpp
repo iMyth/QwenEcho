@@ -49,13 +49,22 @@
 #include "memory_monitor.h"
 #include "latency_tracker.h"
 #include "hal_accelerator.h"
+#include "gguf_inference.h"
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <thread>
+
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
+#endif
 
 /* ─── Supported Languages ────────────────────────────────────────────────── */
 
@@ -123,6 +132,10 @@ struct PipelineController {
 
     /* HAL accelerator (shared across stages) */
     AcceleratorContext*  accelerator;
+
+    /* Feeder thread: reads audio from ring buffer → feeds sentence segmenter */
+    std::thread           feeder_thread;
+    std::atomic<bool>     feeder_running;
 };
 
 /* ─── Internal Helpers ───────────────────────────────────────────────────── */
@@ -133,6 +146,10 @@ struct PipelineController {
  */
 static void on_segment_locked(const LockedSegment* segment, void* user) {
     auto* pc = static_cast<PipelineController*>(user);
+    ECHO_LOG("[Pipeline] Segment locked: id=%u, samples=%u, speaker=%u",
+             segment ? segment->segment_id : 0,
+             segment ? segment->sample_count : 0,
+             segment ? segment->speaker_id : 0);
     if (pc && pc->asr_stage && segment) {
         asr_stage_process_segment(pc->asr_stage, segment);
     }
@@ -177,9 +194,58 @@ static void on_memory_pressure(MemoryLevel level, size_t current_bytes,
 }
 
 /**
+ * Feeder thread: continuously reads audio from the ring buffer and feeds it
+ * to the sentence segmenter for VAD processing and sentence boundary detection.
+ *
+ * This thread bridges the gap between the audio collector (producer → ring buffer)
+ * and the sentence segmenter (consumer of audio frames). Without this thread,
+ * audio is captured into the ring buffer but never processed.
+ *
+ * Reads in chunks of 1600 samples (100ms at 16kHz) for low latency.
+ */
+static void feeder_loop(PipelineController* pc) {
+    constexpr uint32_t READ_CHUNK_SIZE = 1600; /* 100ms at 16kHz */
+    int16_t read_buffer[READ_CHUNK_SIZE];
+    uint32_t read_counter = 0;
+    uint32_t total_samples = 0;
+
+    while (pc->feeder_running.load(std::memory_order_acquire)) {
+        uint32_t avail = pc->ring_buffer->available();
+        if (avail == 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+
+        uint32_t to_read = (avail < READ_CHUNK_SIZE) ? avail : READ_CHUNK_SIZE;
+        uint32_t read_count = pc->ring_buffer->read(read_buffer, to_read);
+
+        if (read_count > 0 && pc->sentence_segmenter) {
+            sentence_segmenter_feed_audio(pc->sentence_segmenter,
+                                           read_buffer, read_count, 0);
+            total_samples += read_count;
+            read_counter++;
+            /* Log every 50 reads (~5 seconds of audio) */
+            if (read_counter % 50 == 1) {
+                ECHO_LOG("[Pipeline] Feeder: %u reads, %u samples, segmenter state=%d",
+                         read_counter, total_samples,
+                         sentence_segmenter_get_state(pc->sentence_segmenter));
+            }
+        }
+    }
+    ECHO_LOG("[Pipeline] Feeder thread stopped (%u total reads, %u samples)",
+             read_counter, total_samples);
+}
+
+/**
  * Destroy all pipeline resources. Must be called with mutex held.
  */
 static void destroy_pipeline_resources(PipelineController* pc) {
+    /* Stop feeder thread first (it reads from ring buffer and feeds segmenter) */
+    pc->feeder_running.store(false, std::memory_order_release);
+    if (pc->feeder_thread.joinable()) {
+        pc->feeder_thread.join();
+    }
+
     /* Destroy stages in reverse-pipeline order (TTS → LLM → ASR) */
     if (pc->tts_stage) {
         tts_stage_destroy(pc->tts_stage);
@@ -252,6 +318,8 @@ PipelineController* pipeline_controller_create(void) {
     /* Placement-new for C++ members (calloc gives raw memory) */
     new (&pc->mutex) std::mutex();
     new (&pc->running) std::atomic<bool>(false);
+    new (&pc->feeder_thread) std::thread();
+    new (&pc->feeder_running) std::atomic<bool>(false);
 
     pc->ring_buffer = nullptr;
     pc->asr_to_llm_queue = nullptr;
@@ -270,7 +338,10 @@ PipelineController* pipeline_controller_create(void) {
 }
 
 int pipeline_controller_start(PipelineController* pc, const char* src_lang,
-                              const char* tgt_lang) {
+                              const char* tgt_lang,
+                              const char* asr_path,
+                              const char* llm_path,
+                              const char* tts_path) {
     if (!pc) return ECHO_ERR_NOT_INITIALIZED;
 
     std::lock_guard<std::mutex> lock(pc->mutex);
@@ -322,7 +393,7 @@ int pipeline_controller_start(PipelineController* pc, const char* src_lang,
     }
 
     /* 5. Create ASR stage (reads from segmenter, writes to asr→llm queue) */
-    pc->asr_stage = asr_stage_create(pc->accelerator, pc->asr_to_llm_queue);
+    pc->asr_stage = asr_stage_create(pc->accelerator, pc->asr_to_llm_queue, asr_path);
     if (!pc->asr_stage) {
         destroy_pipeline_resources(pc);
         return ECHO_ERR_MEMORY;
@@ -339,14 +410,15 @@ int pipeline_controller_start(PipelineController* pc, const char* src_lang,
     /* 7. Create LLM stage (reads from asr→llm queue, writes to llm→tts queue) */
     pc->llm_stage = llm_stage_create(pc->accelerator,
                                      pc->asr_to_llm_queue,
-                                     pc->llm_to_tts_queue);
+                                     pc->llm_to_tts_queue,
+                                     llm_path);
     if (!pc->llm_stage) {
         destroy_pipeline_resources(pc);
         return ECHO_ERR_MEMORY;
     }
 
     /* 8. Create TTS stage (reads from llm→tts queue, outputs audio) */
-    pc->tts_stage = tts_stage_create(pc->accelerator, pc->llm_to_tts_queue);
+    pc->tts_stage = tts_stage_create(pc->accelerator, pc->llm_to_tts_queue, tts_path);
     if (!pc->tts_stage) {
         destroy_pipeline_resources(pc);
         return ECHO_ERR_MEMORY;
@@ -385,6 +457,11 @@ int pipeline_controller_start(PipelineController* pc, const char* src_lang,
         destroy_pipeline_resources(pc);
         return ECHO_ERR_MEMORY;
     }
+
+    /* Start feeder thread: reads ring buffer → feeds sentence segmenter */
+    pc->feeder_running.store(true, std::memory_order_relaxed);
+    pc->feeder_thread = std::thread(feeder_loop, pc);
+    ECHO_LOG("[Pipeline] Feeder thread started");
 
     /* Mark pipeline as running */
     pc->running.store(true, std::memory_order_release);
@@ -482,6 +559,8 @@ void pipeline_controller_destroy(PipelineController* pc) {
     /* Explicitly destroy C++ members before freeing raw memory */
     pc->mutex.~mutex();
     pc->running.~atomic<bool>();
+    pc->feeder_thread.~thread();
+    pc->feeder_running.~atomic<bool>();
 
     free(pc);
 }

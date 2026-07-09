@@ -56,7 +56,8 @@ typedef struct TtsStage TtsStage;
  * @return Pointer to created TTS stage, or nullptr on failure
  */
 TtsStage* tts_stage_create(AcceleratorContext* accelerator,
-                           BoundedSPSCQueue<LlmToTtsElement>* input_queue);
+                           BoundedSPSCQueue<LlmToTtsElement>* input_queue,
+                           const char* model_path);
 
 extern "C" {
 #endif

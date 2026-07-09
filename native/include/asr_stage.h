@@ -50,7 +50,8 @@ typedef struct AsrStage AsrStage;
  * @return Pointer to created ASR stage, or nullptr on failure
  */
 AsrStage* asr_stage_create(AcceleratorContext* accelerator,
-                           BoundedSPSCQueue<AsrToLlmElement>* output_queue);
+                           BoundedSPSCQueue<AsrToLlmElement>* output_queue,
+                           const char* model_path);
 
 extern "C" {
 #endif

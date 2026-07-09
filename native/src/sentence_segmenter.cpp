@@ -24,6 +24,13 @@
 #include <vector>
 #include <cstdint>
 
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
+#endif
+
 /* --------------------------------------------------------------------------
  * Internal VAD energy threshold.
  *
@@ -92,7 +99,8 @@ static bool vad_classify_frame(const int16_t* samples, uint32_t count) {
     }
 
     int32_t mean_energy = static_cast<int32_t>(sum / count);
-    return mean_energy > VAD_ENERGY_THRESHOLD;
+    bool is_speech = mean_energy > VAD_ENERGY_THRESHOLD;
+    return is_speech;
 }
 
 /**
@@ -125,7 +133,13 @@ static void lock_and_dispatch(SentenceSegmenter* seg) {
         uint32_t ms_per_frame = (seg->frame_size * 1000) / seg->sample_rate;
         locked.timestamp_ms = static_cast<uint64_t>(seg->total_frame_count) * ms_per_frame;
 
+        ECHO_LOG("[VAD] Segment dispatched: id=%u, samples=%u, speech_frames=%u, total_frames=%u",
+                 locked.segment_id, locked.sample_count,
+                 seg->speech_frame_count, seg->total_frame_count);
+
         seg->callback(&locked, seg->user_data);
+    } else {
+        ECHO_LOG("[VAD] Segment lock skipped: no callback or empty buffer");
     }
 
     /* Advance segment ID */
@@ -155,6 +169,7 @@ static void process_frame(SentenceSegmenter* seg, const int16_t* frame, uint32_t
                 seg->total_frame_count = 1;
                 /* Begin accumulating audio */
                 seg->audio_buffer.insert(seg->audio_buffer.end(), frame, frame + frame_len);
+                ECHO_LOG("[VAD] Speech onset detected → Accumulating");
             }
             /* If non-speech in Idle, stay in Idle — do nothing */
             break;

@@ -9,10 +9,19 @@
 #include "engine_manager.h"
 #include "model_loader.h"
 #include "pipeline_controller.h"
+#include "gguf_inference.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
+#endif
 
 /* ─── EngineManager struct definition ────────────────────────────────────── */
 
@@ -60,6 +69,10 @@ int engine_manager_load_models(EngineManager* em, const char* asr_path,
     /* Transition to Initializing */
     em->state = ENGINE_INITIALIZING;
 
+    /* Initialize llama.cpp backend (must be done before any GgufContext creation) */
+    gguf_inference_backend_init();
+    ECHO_LOG("[Engine] GGUF inference backend initialized");
+
     /* Create the model loader */
     em->model_loader = model_loader_create();
     if (!em->model_loader) {
@@ -68,6 +81,7 @@ int engine_manager_load_models(EngineManager* em, const char* asr_path,
     }
 
     /* Load ASR model */
+    ECHO_LOG("[Engine] Loading ASR model: %{public}s", asr_path);
     int rc = model_loader_load(em->model_loader, asr_path, MODEL_TYPE_ASR);
     if (rc != ECHO_OK) {
         model_loader_destroy(em->model_loader);
@@ -77,6 +91,7 @@ int engine_manager_load_models(EngineManager* em, const char* asr_path,
     }
 
     /* Load LLM model */
+    ECHO_LOG("[Engine] Loading LLM model: %{public}s", llm_path);
     rc = model_loader_load(em->model_loader, llm_path, MODEL_TYPE_LLM);
     if (rc != ECHO_OK) {
         model_loader_destroy(em->model_loader);
@@ -86,6 +101,7 @@ int engine_manager_load_models(EngineManager* em, const char* asr_path,
     }
 
     /* Load TTS model */
+    ECHO_LOG("[Engine] Loading TTS model: %{public}s", tts_path);
     rc = model_loader_load(em->model_loader, tts_path, MODEL_TYPE_TTS);
     if (rc != ECHO_OK) {
         model_loader_destroy(em->model_loader);
@@ -96,6 +112,7 @@ int engine_manager_load_models(EngineManager* em, const char* asr_path,
 
     /* All models loaded successfully → Ready */
     em->state = ENGINE_READY;
+    ECHO_LOG("[Engine] All models loaded — engine ready");
     return ECHO_OK;
 }
 
@@ -127,15 +144,30 @@ int engine_manager_start_pipeline(EngineManager* em, const char* src_lang,
         }
     }
 
-    /* Start the pipeline — validates language pair and creates all resources */
-    int rc = pipeline_controller_start(em->pipeline_ctrl, src_lang, tgt_lang);
+    /* Start the pipeline — validates language pair and creates all resources.
+     * Pass model paths from the model loader so stages can initialize
+     * real GGUF inference via llama.cpp. */
+    const char* asr_path = model_loader_get_path(em->model_loader, MODEL_TYPE_ASR);
+    const char* llm_path = model_loader_get_path(em->model_loader, MODEL_TYPE_LLM);
+    const char* tts_path = model_loader_get_path(em->model_loader, MODEL_TYPE_TTS);
+    
+    ECHO_LOG("[Engine] Starting pipeline: %{public}s \u2192 %{public}s", src_lang, tgt_lang);
+    ECHO_LOG("[Engine] Model paths: ASR=%{public}s, LLM=%{public}s, TTS=%{public}s",
+             asr_path ? asr_path : "(null)",
+             llm_path ? llm_path : "(null)",
+             tts_path ? tts_path : "(null)");
+    
+    int rc = pipeline_controller_start(em->pipeline_ctrl, src_lang, tgt_lang,
+                                       asr_path, llm_path, tts_path);
     if (rc != ECHO_OK) {
+        ECHO_LOG("[Engine] Pipeline start failed: error=%d", rc);
         return rc;
     }
 
     /* Transition to Running */
     em->state = ENGINE_RUNNING;
     em->session_active = true;
+    ECHO_LOG("[Engine] Pipeline running");
 
     return ECHO_OK;
 }
@@ -152,6 +184,7 @@ int engine_manager_stop_pipeline(EngineManager* em) {
 
     /* Transition to Stopping */
     em->state = ENGINE_STOPPING;
+    ECHO_LOG("[Engine] Stopping pipeline...");
 
     /* Gracefully stop the pipeline via PipelineController.
      * This processes locked segments, discards unlocked audio, and
@@ -163,6 +196,7 @@ int engine_manager_stop_pipeline(EngineManager* em) {
     /* Transition back to Ready, session ended */
     em->state = ENGINE_READY;
     em->session_active = false;
+    ECHO_LOG("[Engine] Pipeline stopped — engine ready");
 
     return ECHO_OK;
 }
@@ -186,6 +220,10 @@ void engine_manager_destroy(EngineManager* em) {
         }
         em->state = ENGINE_UNINITIALIZED;
     }
+
+    /* Free llama.cpp backend resources */
+    gguf_inference_backend_free();
+    ECHO_LOG("[Engine] GGUF inference backend freed");
 
     /* Explicitly destroy the mutex before freeing */
     em->mutex.~mutex();

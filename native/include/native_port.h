@@ -26,7 +26,7 @@ extern "C" {
  * minimal subset of Dart_CObject types needed for message serialization.
  * If dart_api_dl.h IS available, include it and skip this block.
  * ----------------------------------------------------------------------- */
-#ifndef DART_API_DL_H_
+#if !defined(DART_API_DL_H_) && !defined(RUNTIME_INCLUDE_DART_NATIVE_API_H_)
 
 typedef enum {
     Dart_CObject_kNull    = 0,
@@ -84,14 +84,12 @@ void native_port_register(int64_t port_id);
 bool native_port_is_registered(void);
 
 /**
- * Set the runtime function pointer used to post messages.
+ * Mark the post function as ready.
  *
- * When the Dart VM is available, this should be set to Dart_PostCObject_DL.
- * For testing, a mock function can be provided.
- *
- * @param post_fn  Function pointer matching Dart_PostCObject_DL signature
+ * Call after Dart_InitializeApiDL has been invoked so that
+ * Dart_PostCObject_DL is available for message dispatch.
  */
-void native_port_set_post_fn(Dart_PostCObject_Type post_fn);
+void native_port_set_post_fn(void);
 
 /* -----------------------------------------------------------------------
  * Typed message dispatch functions

@@ -23,6 +23,7 @@
 #include "bounded_spsc_queue.h"
 #include "native_port.h"
 #include "hal_accelerator.h"
+#include "gguf_inference.h"
 
 #include <atomic>
 #include <chrono>
@@ -32,6 +33,13 @@
 #include <vector>
 #include <cstdint>
 #include <cstdio>
+
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
+#endif
 
 /* --------------------------------------------------------------------------
  * Constants
@@ -74,6 +82,9 @@ struct LlmStage {
 
     /* Output queue: translated text → TTS stage */
     BoundedSPSCQueue<LlmToTtsElement>* output_queue;
+
+    /* GGUF inference context for real LLM model (NULL if stub mode) */
+    GgufContext* gguf_ctx;
 
     /* Thermal mode: 0 = Normal, 1 = Throttle */
     std::atomic<int> throttle_mode;
@@ -164,49 +175,73 @@ static bool is_punctuation_boundary(char c) {
 }
 
 /**
- * Stub LLM inference: simulates token-by-token translation.
- *
- * In production, this would call hal_accelerator_infer() with the
- * Qwen3-4B-Instruct model. For now, we simulate by reversing words
- * and adding a "[T]" prefix to indicate translation.
- *
- * Returns a vector of "tokens" representing the translation result.
+ * Real LLM inference using GGUF model via llama.cpp.
+ * Falls back to stub if model is not loaded.
  */
-static std::vector<std::string> stub_translate_tokens(
-    AcceleratorContext* /*accelerator*/,
+static std::vector<std::string> real_translate_tokens(
+    GgufContext* gguf_ctx,
     const std::string& /*context*/,
     const std::string& input_text) {
 
     std::vector<std::string> tokens;
-
     if (input_text.empty()) return tokens;
 
-    /* Simulate translation: prefix with [T] and tokenize by words.
-     * Each word becomes a token in the output stream. */
-    tokens.emplace_back("[T]");
-
-    std::string word;
-    for (size_t i = 0; i < input_text.size(); ++i) {
-        char c = input_text[i];
-        if (c == ' ' || c == '\t' || c == '\n') {
-            if (!word.empty()) {
-                tokens.push_back(word);
-                word.clear();
-            }
-        } else {
-            word += c;
+    if (!gguf_ctx) {
+        /* Stub fallback */
+        tokens.emplace_back("[T]");
+        std::string word;
+        for (size_t i = 0; i < input_text.size(); ++i) {
+            char c = input_text[i];
+            if (c == ' ' || c == '\t' || c == '\n') {
+                if (!word.empty()) { tokens.push_back(word); word.clear(); }
+            } else { word += c; }
         }
-    }
-    if (!word.empty()) {
-        tokens.push_back(word);
+        if (!word.empty()) tokens.push_back(word);
+        if (!tokens.empty()) {
+            const std::string& last = tokens.back();
+            if (!last.empty() && !is_punctuation_boundary(last.back()))
+                tokens.emplace_back(".");
+        }
+        return tokens;
     }
 
-    /* Add a sentence-ending period if the last token doesn't end with punctuation */
+    ECHO_LOG("[LLM] Real translation: %{public}s", input_text.c_str());
+
+    /* Build translation prompt using chat template */
+    char prompt[4096];
+    std::snprintf(prompt, sizeof(prompt),
+                  "You are a professional translator. Translate the following text. "
+                  "Output only the translation without any explanation.\n\n%s",
+                  input_text.c_str());
+
+    /* Run generation */
+    char output[4096] = {};
+    int n = gguf_inference_generate(gguf_ctx, prompt, output, sizeof(output), 256);
+
+    if (n > 0) {
+        std::string text(output, static_cast<size_t>(n));
+        ECHO_LOG("[LLM] Translation result: %{public}s", text.c_str());
+
+        /* Tokenize by whitespace for streaming */
+        std::string word;
+        for (size_t i = 0; i < text.size(); ++i) {
+            char c = text[i];
+            if (c == ' ' || c == '\t' || c == '\n') {
+                if (!word.empty()) { tokens.push_back(word); word.clear(); }
+            } else { word += c; }
+        }
+        if (!word.empty()) tokens.push_back(word);
+    } else {
+        ECHO_LOG("[LLM] Real inference failed, returning stub");
+        tokens.emplace_back("[T]");
+        tokens.push_back(input_text);
+    }
+
+    /* Ensure sentence-ending punctuation */
     if (!tokens.empty()) {
         const std::string& last = tokens.back();
-        if (!last.empty() && !is_punctuation_boundary(last.back())) {
+        if (!last.empty() && !is_punctuation_boundary(last.back()))
             tokens.emplace_back(".");
-        }
     }
 
     return tokens;
@@ -254,6 +289,9 @@ static void llm_worker_loop(LlmStage* stage) {
         /* Record time of dequeue for SLA tracking */
         auto dequeue_time = std::chrono::steady_clock::now();
 
+        ECHO_LOG("[LLM] Input received: seg=%u, text=%{public}s",
+                 input.segment_id, input.text);
+
         /* Capture the thermal mode at translation start (freeze for this segment) */
         int segment_thermal_mode = stage->throttle_mode.load(std::memory_order_acquire);
         uint32_t window_size = get_context_window_size(segment_thermal_mode);
@@ -269,9 +307,9 @@ static void llm_worker_loop(LlmStage* stage) {
         build_context_prompt(stage->context_history, current_tokens,
                              window_size, context_prompt);
 
-        /* Run stub inference — generate translation tokens */
-        std::vector<std::string> tokens = stub_translate_tokens(
-            stage->accelerator, context_prompt, input_text);
+        /* Run inference — real or stub */
+        std::vector<std::string> tokens = real_translate_tokens(
+            stage->gguf_ctx, context_prompt, input_text);
 
         if (tokens.empty()) {
             /* Nothing to translate — skip */
@@ -346,6 +384,9 @@ static void llm_worker_loop(LlmStage* stage) {
             full_translation.c_str(),
             input.segment_id);
 
+        ECHO_LOG("[LLM] Translation done: seg=%u, translation=%{public}s",
+                 input.segment_id, full_translation.c_str());
+
         /* Update sliding context history with the new confirmed translation */
         ContextEntry new_entry;
         new_entry.text = full_translation;
@@ -366,7 +407,8 @@ static void llm_worker_loop(LlmStage* stage) {
 
 LlmStage* llm_stage_create(AcceleratorContext* accelerator,
                             BoundedSPSCQueue<AsrToLlmElement>* input_queue,
-                            BoundedSPSCQueue<LlmToTtsElement>* output_queue) {
+                            BoundedSPSCQueue<LlmToTtsElement>* output_queue,
+                            const char* model_path) {
     if (!input_queue || !output_queue) return nullptr;
 
     LlmStage* stage = new (std::nothrow) LlmStage();
@@ -380,6 +422,17 @@ LlmStage* llm_stage_create(AcceleratorContext* accelerator,
 
     /* Reserve space for sliding history */
     stage->context_history.reserve(SLIDING_HISTORY_COUNT);
+
+    /* Initialize GGUF inference context if model path is provided */
+    stage->gguf_ctx = nullptr;
+    if (model_path && model_path[0] != '\0') {
+        stage->gguf_ctx = gguf_inference_create(model_path, 2048, 4);
+        if (stage->gguf_ctx) {
+            ECHO_LOG("[LLM] GGUF model loaded: %{public}s", model_path);
+        } else {
+            ECHO_LOG("[LLM] Failed to load GGUF model, using stub mode: %{public}s", model_path);
+        }
+    }
 
     /* Launch worker thread */
     stage->worker = std::thread(llm_worker_loop, stage);
@@ -403,6 +456,11 @@ void llm_stage_destroy(LlmStage* stage) {
     /* Wait for worker to finish */
     if (stage->worker.joinable()) {
         stage->worker.join();
+    }
+
+    /* Free GGUF inference context */
+    if (stage->gguf_ctx) {
+        gguf_inference_destroy(stage->gguf_ctx);
     }
 
     delete stage;

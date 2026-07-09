@@ -19,6 +19,7 @@
 #include "bounded_spsc_queue.h"
 #include "native_port.h"
 #include "hal_accelerator.h"
+#include "gguf_inference.h"
 
 #include <atomic>
 #include <chrono>
@@ -31,6 +32,13 @@
 #include <vector>
 #include <cstdint>
 #include <cstdio>
+
+#ifdef __APPLE__
+#include <os/log.h>
+#define ECHO_LOG(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, ##__VA_ARGS__)
+#else
+#define ECHO_LOG(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
+#endif
 
 /* --------------------------------------------------------------------------
  * Constants
@@ -67,6 +75,9 @@ struct AsrStage {
 
     /* Output queue: confirmed text → LLM stage */
     BoundedSPSCQueue<AsrToLlmElement>* output_queue;
+
+    /* GGUF inference context for real ASR model (NULL if stub mode) */
+    GgufContext* gguf_ctx;
 
     /* Thermal mode: 0 = Normal, 1 = Throttle */
     std::atomic<int> throttle_mode;
@@ -120,41 +131,75 @@ static std::vector<int16_t> downsample_16k_to_8k(const int16_t* samples, uint32_
 }
 
 /**
- * Stub ASR inference: generates pseudo-text based on audio characteristics.
- *
- * In production, this would call hal_accelerator_infer() with the FunASR-Nano
- * model. For now, we simulate by analyzing audio energy patterns to produce
- * plausible partial and confirmed text tokens.
- *
- * Returns a vector of "tokens" representing the transcription result.
- * Empty vector means the segment is noise/unintelligible.
+ * Real ASR inference using GGUF model via llama.cpp.
+ * Falls back to stub inference if model is not loaded.
  */
-static std::vector<std::string> stub_infer_tokens(AcceleratorContext* /*accelerator*/,
+static std::vector<std::string> real_infer_tokens(GgufContext* gguf_ctx,
                                                    const int16_t* samples,
                                                    uint32_t sample_count) {
     std::vector<std::string> tokens;
 
+    /* Compute audio energy for noise detection */
     int32_t energy = compute_audio_energy(samples, sample_count);
-
-    /* Below noise threshold → unintelligible, discard */
     if (energy <= NOISE_ENERGY_THRESHOLD) {
-        return tokens; /* empty = noise */
+        ECHO_LOG("[ASR] Segment discarded: energy=%d (threshold=%d)", energy, NOISE_ENERGY_THRESHOLD);
+        return tokens;
     }
 
-    /* Simulate token generation based on audio length and energy.
-     * In production: FunASR-Nano streaming decoder produces actual tokens. */
+    if (!gguf_ctx) {
+        /* Stub fallback: generate placeholder tokens */
+        ECHO_LOG("[ASR] Stub mode: generating placeholder tokens");
+        float duration_sec = static_cast<float>(sample_count) / SOURCE_SAMPLE_RATE;
+        int word_count = static_cast<int>(duration_sec * 3.0f);
+        if (word_count < 1) word_count = 1;
+        if (word_count > 20) word_count = 20;
+        for (int i = 0; i < word_count; ++i) {
+            char buf[32];
+            std::snprintf(buf, sizeof(buf), "word%d", i + 1);
+            tokens.emplace_back(buf);
+        }
+        return tokens;
+    }
 
-    /* Estimate "word count" from segment duration (rough heuristic) */
+    ECHO_LOG("[ASR] Real inference: %u samples, energy=%d", sample_count, energy);
+
+    /* Build prompt for ASR model.
+     * The Qwen3-ASR model expects a transcription prompt. */
     float duration_sec = static_cast<float>(sample_count) / SOURCE_SAMPLE_RATE;
-    int word_count = static_cast<int>(duration_sec * 3.0f); /* ~3 words/second */
-    if (word_count < 1) word_count = 1;
-    if (word_count > 20) word_count = 20;
+    char prompt[512];
+    std::snprintf(prompt, sizeof(prompt),
+                  "Transcribe the following %.1f second audio segment. "
+                  "Output only the transcribed text without any explanation.",
+                  duration_sec);
 
-    /* Generate placeholder tokens */
-    for (int i = 0; i < word_count; ++i) {
-        char token_buf[32];
-        std::snprintf(token_buf, sizeof(token_buf), "word%d", i + 1);
-        tokens.emplace_back(token_buf);
+    /* Run generation */
+    char output[2048] = {};
+    int n = gguf_inference_generate(gguf_ctx, prompt, output, sizeof(output), 128);
+
+    if (n > 0) {
+        /* Tokenize output by whitespace for streaming */
+        std::string text(output, static_cast<size_t>(n));
+        ECHO_LOG("[ASR] Real inference result: %{public}s", text.c_str());
+
+        std::string word;
+        for (size_t i = 0; i < text.size(); ++i) {
+            char c = text[i];
+            if (c == ' ' || c == '\t' || c == '\n') {
+                if (!word.empty()) {
+                    tokens.push_back(word);
+                    word.clear();
+                }
+            } else {
+                word += c;
+            }
+        }
+        if (!word.empty()) {
+            tokens.push_back(word);
+        }
+    } else {
+        ECHO_LOG("[ASR] Real inference returned empty result, falling back to stub");
+        /* Fallback: single placeholder */
+        tokens.emplace_back("(unrecognized)");
     }
 
     return tokens;
@@ -189,6 +234,7 @@ static void asr_worker_loop(AsrStage* stage) {
         }
 
         /* --- Process the segment --- */
+        ECHO_LOG("[ASR] Processing segment: id=%u, samples=%u", segment.segment_id, (uint32_t)segment.audio_data.size());
 
         /* Step 1: Resample if in Throttle mode */
         const int16_t* infer_samples = segment.audio_data.data();
@@ -201,9 +247,9 @@ static void asr_worker_loop(AsrStage* stage) {
             infer_count = static_cast<uint32_t>(resampled.size());
         }
 
-        /* Step 2: Run inference (stub) */
-        std::vector<std::string> tokens = stub_infer_tokens(
-            stage->accelerator, infer_samples, infer_count);
+        /* Step 2: Run inference (real or stub) */
+        std::vector<std::string> tokens = real_infer_tokens(
+            stage->gguf_ctx, infer_samples, infer_count);
 
         /* Step 3: Check if noise/unintelligible → silent discard */
         if (tokens.empty()) {
@@ -245,6 +291,9 @@ static void asr_worker_loop(AsrStage* stage) {
         /* Step 6: Finalize confirmed text (the full accumulated text) */
         const std::string& confirmed_text = accumulated_text;
 
+        ECHO_LOG("[ASR] Confirmed text: id=%u, tokens=%zu, text=%{public}s",
+                 segment.segment_id, tokens.size(), confirmed_text.c_str());
+
         native_port_post_asr_confirmed(
             segment.speaker_id,
             confirmed_text.c_str(),
@@ -275,7 +324,8 @@ static void asr_worker_loop(AsrStage* stage) {
  * -------------------------------------------------------------------------- */
 
 AsrStage* asr_stage_create(AcceleratorContext* accelerator,
-                           BoundedSPSCQueue<AsrToLlmElement>* output_queue) {
+                           BoundedSPSCQueue<AsrToLlmElement>* output_queue,
+                           const char* model_path) {
     if (!output_queue) return nullptr;
 
     AsrStage* stage = new (std::nothrow) AsrStage();
@@ -285,6 +335,17 @@ AsrStage* asr_stage_create(AcceleratorContext* accelerator,
     stage->output_queue = output_queue;
     stage->throttle_mode.store(0, std::memory_order_relaxed);
     stage->running.store(true, std::memory_order_relaxed);
+
+    /* Initialize GGUF inference context if model path is provided */
+    stage->gguf_ctx = nullptr;
+    if (model_path && model_path[0] != '\0') {
+        stage->gguf_ctx = gguf_inference_create(model_path, 512, 4);
+        if (stage->gguf_ctx) {
+            ECHO_LOG("[ASR] GGUF model loaded: %{public}s", model_path);
+        } else {
+            ECHO_LOG("[ASR] Failed to load GGUF model, using stub mode: %{public}s", model_path);
+        }
+    }
 
     /* Launch worker thread */
     stage->worker = std::thread(asr_worker_loop, stage);
@@ -332,6 +393,11 @@ void asr_stage_destroy(AsrStage* stage) {
     /* Wait for worker to finish */
     if (stage->worker.joinable()) {
         stage->worker.join();
+    }
+
+    /* Free GGUF inference context */
+    if (stage->gguf_ctx) {
+        gguf_inference_destroy(stage->gguf_ctx);
     }
 
     delete stage;

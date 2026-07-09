@@ -6,7 +6,10 @@ library qwen_echo;
 
 export 'src/echo_engine.dart';
 export 'src/messages.dart';
+export 'src/model/model_catalog.dart';
+export 'src/model/model_repository.dart';
 export 'src/native_bridge.dart' show EchoEngineException, EchoErrorCode;
 export 'src/port_manager.dart';
+export 'src/ui/model_config_screen.dart';
 export 'src/ui/status_bar.dart';
 export 'src/ui/warning_overlay.dart';

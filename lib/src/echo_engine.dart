@@ -68,7 +68,10 @@ class EchoEngine {
     required String llmPath,
     required String ttsPath,
   }) {
-    // Register port first so the engine can send init status messages.
+    // Initialize the Dart API DL subsystem so native code can post messages.
+    _bridge.initDartApiDL();
+
+    // Register port so the engine can send init status messages.
     _portManager.register();
     _bridge.initEngine(asrPath, llmPath, ttsPath);
     _state = EchoEngineState.ready;

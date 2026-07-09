@@ -193,6 +193,17 @@ int hal_audio_capture_start(AudioCapture* cap, hal_audio_capture_callback_t cb,
         uint32_t targetSampleRate = cap->sample_rate;
         uint32_t targetChannels = cap->channels;
 
+        /* Compute decimation factor for resampling.
+         * AVAudioEngine may deliver at hardware native rate (e.g., 48kHz on
+         * simulator) even if setPreferredSampleRate was called. We decimate
+         * to the target rate by taking every Nth sample. */
+        double hwRate = hwFormat.sampleRate;
+        uint32_t decimation = 1;
+        if (hwRate > (double)targetSampleRate) {
+            decimation = (uint32_t)((hwRate / (double)targetSampleRate) + 0.5);
+            if (decimation < 1) decimation = 1;
+        }
+
         [cap->inputNode installTapOnBus:0
                              bufferSize:bufferSize
                                  format:hwFormat
@@ -239,15 +250,23 @@ int hal_audio_capture_start(AudioCapture* cap, hal_audio_capture_callback_t cb,
             }
 
             /*
-             * If hardware sample rate differs from target, a real implementation
-             * would resample here. For supported iOS devices, requesting the
-             * format in setPreferredSampleRate typically aligns the hardware.
+             * Resample by decimation if hardware rate differs from target.
+             * Simple N:1 decimation (no anti-aliasing filter) — sufficient
+             * for the stub VAD pipeline. A production implementation would
+             * use a proper resampler (e.g., AVAudioConverter or libresample).
              */
-            (void)targetSampleRate;
+            uint32_t outputCount = (uint32_t)frameCount;
+            if (decimation > 1) {
+                outputCount = (uint32_t)frameCount / decimation;
+                for (uint32_t i = 0; i < outputCount; i++) {
+                    int16Buffer[i] = int16Buffer[i * decimation];
+                }
+            }
+
             (void)targetChannels;
 
-            /* Deliver samples via callback */
-            blockCallback(int16Buffer, (uint32_t)frameCount, blockUserData);
+            /* Deliver resampled int16 samples via callback */
+            blockCallback(int16Buffer, outputCount, blockUserData);
 
             /* Free heap buffer if allocated */
             if (int16Buffer != stackBuffer) {

@@ -24,13 +24,14 @@ extern "C" {
 #endif
 
 /**
- * GGUF file magic bytes: "GGUF" in little-endian = 0x46475547.
+ * GGUF file magic bytes: "GGUF" = {0x47,0x47,0x55,0x46}.
+ * Read as a little-endian uint32 this is 0x46554747.
  */
-#define GGUF_MAGIC 0x46475547u
+#define GGUF_MAGIC 0x46554747u
 
 /**
- * GGUF quantization type codes (subset relevant to this project).
- * INT4 corresponds to Q4_0 or Q4_1 in the ggml type system.
+ * GGUF quantization type codes (ggml type system).
+ * We accept K-quants and legacy 4-bit quants for mobile deployment.
  */
 typedef enum {
     GGUF_QUANT_F32    = 0,
@@ -42,10 +43,12 @@ typedef enum {
     GGUF_QUANT_Q8_0   = 8,
     GGUF_QUANT_Q8_1   = 9,
     GGUF_QUANT_Q2_K   = 10,
-    GGUF_QUANT_Q3_K   = 11,
-    GGUF_QUANT_Q4_K   = 12,
-    GGUF_QUANT_Q5_K   = 13,
-    GGUF_QUANT_Q6_K   = 14,
+    GGUF_QUANT_Q3_K   = 11,  /**< ~3.4 bpw K-quant */
+    GGUF_QUANT_Q4_K   = 12,  /**< ~4.5 bpw K-quant */
+    GGUF_QUANT_Q5_K   = 13,  /**< ~5.5 bpw K-quant */
+    GGUF_QUANT_Q6_K   = 14,  /**< ~6.6 bpw K-quant */
+    GGUF_QUANT_IQ4_NL = 27,  /**< ~4.5 bpw importance-matrix quant */
+    GGUF_QUANT_IQ4_XS = 28,  /**< ~4.25 bpw importance-matrix quant */
 } GgufQuantType;
 
 /**
@@ -88,7 +91,10 @@ ModelLoader* model_loader_create(void);
  *   1. Check file exists → ECHO_ERR_MODEL_MISSING if not
  *   2. Check file permissions → ECHO_ERR_MODEL_PERMISSION if unreadable
  *   3. Read header magic → ECHO_ERR_MODEL_INVALID if != 0x46475547
- *   4. Validate INT4 quantization → ECHO_ERR_MODEL_INVALID if not Q4_0/Q4_1/Q4_K
+ *   4. Validate quantization → ECHO_ERR_MODEL_INVALID if not an accepted
+ *      quant (Q4_0/Q4_1, K-quants Q3_K–Q6_K, or IQ4 variants).
+ *      Uses general.file_type metadata when available, otherwise scans
+ *      for a representative weight tensor (token_embd / blk.0.*).
  *   5. mmap the file for efficient memory access
  *   6. Create inference context for the model type
  *
@@ -116,6 +122,15 @@ ModelInfo model_loader_get_info(const ModelLoader* loader, ModelType type);
  * @return Opaque pointer to inference context, or NULL if model not loaded.
  */
 void* model_loader_get_context(ModelLoader* loader, ModelType type);
+
+/**
+ * Get the file path for a loaded model.
+ *
+ * @param loader  Model loader instance.
+ * @param type    Model type to query.
+ * @return File path string (valid until unload/destroy), or NULL if not loaded.
+ */
+const char* model_loader_get_path(const ModelLoader* loader, ModelType type);
 
 /**
  * Unload a specific model and release its resources.

@@ -46,22 +46,28 @@ typedef struct PipelineController PipelineController;
 PipelineController* pipeline_controller_create(void);
 
 /**
- * Start the pipeline with the given language pair.
+ * Start the pipeline with the given language pair and model paths.
  *
  * Validates language codes against supported ISO 639-1 codes, then creates
  * all pipeline resources (ring buffer, queues, stages, monitors) and starts
  * all component threads.
  *
- * @param pc        Pipeline Controller instance.
- * @param src_lang  ISO 639-1 source language code (e.g. "zh", "en").
- * @param tgt_lang  ISO 639-1 target language code (e.g. "en", "ja").
+ * @param pc         Pipeline Controller instance.
+ * @param src_lang   ISO 639-1 source language code (e.g. "zh", "en").
+ * @param tgt_lang   ISO 639-1 target language code (e.g. "en", "ja").
+ * @param asr_path   Path to ASR GGUF model file (NULL for stub mode).
+ * @param llm_path   Path to LLM GGUF model file (NULL for stub mode).
+ * @param tts_path   Path to TTS GGUF model file (NULL for stub mode).
  * @return ECHO_OK on success.
  *         ECHO_ERR_UNSUPPORTED_LANG if either language code is not supported.
  *         ECHO_ERR_SESSION_ACTIVE if the pipeline is already running.
  *         ECHO_ERR_MEMORY on allocation failure.
  */
 int pipeline_controller_start(PipelineController* pc, const char* src_lang,
-                              const char* tgt_lang);
+                              const char* tgt_lang,
+                              const char* asr_path,
+                              const char* llm_path,
+                              const char* tts_path);
 
 /**
  * Gracefully stop the pipeline.

@@ -33,6 +33,10 @@ typedef _StopPipelineDart = int Function();
 typedef _RegisterPortNative = Int32 Function(Int64 dartPortId);
 typedef _RegisterPortDart = int Function(int dartPortId);
 
+/// C signature: int32_t InitDartApiDL(void* data)
+typedef _InitDartApiDLNative = Int32 Function(Pointer<Void> data);
+typedef _InitDartApiDLDart = int Function(Pointer<Void> data);
+
 // ---------------------------------------------------------------------------
 // Error codes (mirrors EchoErrorCode in echo_types.h)
 // ---------------------------------------------------------------------------
@@ -106,6 +110,7 @@ class NativeBridge {
   late final _StartPipelineDart _startPipeline;
   late final _StopPipelineDart _stopPipeline;
   late final _RegisterPortDart _registerPort;
+  late final _InitDartApiDLDart _initDartApiDL;
 
   /// Create a [NativeBridge] loading the native library for the current
   /// platform.
@@ -174,6 +179,17 @@ class NativeBridge {
     _throwOnError(result);
   }
 
+  /// Initialize the Dart API DL subsystem on the native side.
+  ///
+  /// Must be called before [registerPort]. Passes
+  /// [NativeApi.initializeApiDLData] to the native code.
+  ///
+  /// Throws [EchoEngineException] on failure.
+  void initDartApiDL() {
+    final result = _initDartApiDL(NativeApi.initializeApiDLData);
+    _throwOnError(result);
+  }
+
   /// Register a Dart Native Port for async message delivery.
   ///
   /// [portId] is the [SendPort.nativePort] value.
@@ -219,6 +235,9 @@ class NativeBridge {
     _registerPort = _lib
         .lookupFunction<_RegisterPortNative, _RegisterPortDart>(
             'RegisterEchoMessagePort');
+    _initDartApiDL = _lib
+        .lookupFunction<_InitDartApiDLNative, _InitDartApiDLDart>(
+            'InitDartApiDL');
   }
 
   void _throwOnError(int code) {

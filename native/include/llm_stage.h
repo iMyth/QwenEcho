@@ -59,7 +59,8 @@ typedef struct LlmStage LlmStage;
  */
 LlmStage* llm_stage_create(AcceleratorContext* accelerator,
                             BoundedSPSCQueue<AsrToLlmElement>* input_queue,
-                            BoundedSPSCQueue<LlmToTtsElement>* output_queue);
+                            BoundedSPSCQueue<LlmToTtsElement>* output_queue,
+                            const char* model_path);
 
 extern "C" {
 #endif
