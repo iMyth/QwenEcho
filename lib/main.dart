@@ -76,43 +76,41 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
         setState(() => _statusText = 'Models not ready — tap settings');
         return;
       }
-      _engine.init(
-        asrPath: paths[ModelKind.asr]!,
+      await _engine.init(
         llmPath: paths[ModelKind.llm]!,
-        ttsPath: paths[ModelKind.tts]!,
       );
-      setState(() => _statusText = 'Ready ($_srcLang\u2192$_tgtLang) \u2014 tap mic');
+      setState(() => _statusText = 'Ready ($_srcLang→$_tgtLang) — tap mic');
     } catch (e) {
       setState(() => _statusText = 'Init failed: $e');
     }
   }
 
   /// Toggle the interpretation pipeline on/off.
-  void _togglePipeline() {
+  Future<void> _togglePipeline() async {
     if (_engine.state == EchoEngineState.uninitialized) {
       _openModelConfig();
       return;
     }
     if (_engine.state == EchoEngineState.running) {
-      _engine.stop();
+      await _engine.stop();
       setState(() => _statusText = 'Stopped — tap mic to resume');
     } else if (_engine.state == EchoEngineState.ready) {
-      _engine.start(srcLang: _srcLang, tgtLang: _tgtLang);
+      await _engine.start(srcLang: _srcLang, tgtLang: _tgtLang);
       setState(() => _statusText = 'Listening ($_srcLang→$_tgtLang)');
     }
   }
 
   /// Swap source and target languages.
   /// Restarts the pipeline with the new direction if currently running.
-  void _swapDirection() {
+  Future<void> _swapDirection() async {
     setState(() {
       final tmp = _srcLang;
       _srcLang = _tgtLang;
       _tgtLang = tmp;
     });
     if (_engine.state == EchoEngineState.running) {
-      _engine.stop();
-      _engine.start(srcLang: _srcLang, tgtLang: _tgtLang);
+      await _engine.stop();
+      await _engine.start(srcLang: _srcLang, tgtLang: _tgtLang);
       setState(() => _statusText = 'Listening ($_srcLang→$_tgtLang)');
     } else if (_engine.state == EchoEngineState.ready) {
       setState(() => _statusText = 'Ready ($_srcLang→$_tgtLang) — tap mic');
@@ -154,17 +152,10 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
         // TranslationDone serves as a logical completion marker.
         break;
 
-      case TtsStartedMessage():
-      case TtsCompleteMessage():
-        // TTS lifecycle events — no direct UI rendering needed.
-        // Audio output is handled natively via HAL.
-        break;
-
       case ErrorMessage():
       case ThermalStateMessage():
-      case MemoryWarningMessage():
       case LatencyWarningMessage():
-      case SampleDropMessage():
+      case EngineReadyMessage():
         // These are handled by the StatusBar's own message subscription.
         break;
     }

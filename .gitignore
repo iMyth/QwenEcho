@@ -1,9 +1,10 @@
 # Models (too large for git)
 models/
-*.gguf
 
-# Native build artifacts
-native/build/
+# Swift Package Manager build artifacts
+.build/
+.swiftpm/
+SourcePackages/
 
 # Flutter/Dart
 .dart_tool/

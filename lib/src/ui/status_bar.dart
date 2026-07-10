@@ -89,7 +89,7 @@ class _StatusBarState extends State<StatusBar> {
 
   void _onMessage(EchoMessage message) {
     if (message is ThermalStateMessage) {
-      final newMode = ThermalMode.fromCode(message.thermalMode);
+      final newMode = ThermalMode.fromCode(message.mode);
       if (newMode != _thermalMode) {
         setState(() {
           _thermalMode = newMode;
@@ -111,6 +111,8 @@ class _StatusBarState extends State<StatusBar> {
                 _buildOfflineBadge(),
                 const SizedBox(width: 8),
                 _buildThermalIndicator(),
+                const SizedBox(width: 8),
+                _buildEngineBadges(),
                 const Spacer(),
               ],
             ),
@@ -174,6 +176,37 @@ class _StatusBarState extends State<StatusBar> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Engine info badges showing which inference engines are active.
+  Widget _buildEngineBadges() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _engineBadge('ASR', 'Speech'),
+        const SizedBox(width: 4),
+        _engineBadge('LLM', 'MLX'),
+      ],
+    );
+  }
+
+  Widget _engineBadge(String label, String engine) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0xFF3A3A3A), width: 1),
+      ),
+      child: Text(
+        '$label: $engine',
+        style: const TextStyle(
+          color: Color(0xFFBDBDBD),
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

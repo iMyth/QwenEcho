@@ -49,21 +49,21 @@ void main() {
       expect(find.text('Normal'), findsOneWidget);
 
       // Send Throttle mode.
-      controller.add(const ThermalStateMessage(thermalMode: 1, temperatureC: 44.0));
+      controller.add(const ThermalStateMessage(mode: 1, detail: 'Throttle'));
       await tester.pumpAndSettle();
 
       expect(find.text('Throttle'), findsOneWidget);
       expect(find.text('Normal'), findsNothing);
 
       // Send Critical mode.
-      controller.add(const ThermalStateMessage(thermalMode: 2, temperatureC: 51.0));
+      controller.add(const ThermalStateMessage(mode: 2, detail: 'Critical'));
       await tester.pumpAndSettle();
 
       expect(find.text('Critical'), findsOneWidget);
       expect(find.text('Throttle'), findsNothing);
 
       // Return to Normal.
-      controller.add(const ThermalStateMessage(thermalMode: 0, temperatureC: 40.0));
+      controller.add(const ThermalStateMessage(mode: 0, detail: 'Normal'));
       await tester.pumpAndSettle();
 
       expect(find.text('Normal'), findsOneWidget);
@@ -81,7 +81,7 @@ void main() {
 
       // Send a non-thermal message.
       controller.add(const AsrPartialMessage(
-          speakerId: 0, text: 'hello', timestampMs: 100));
+          speakerId: 0, text: 'hello', segmentId: 0));
       await tester.pump();
 
       // Still Normal.

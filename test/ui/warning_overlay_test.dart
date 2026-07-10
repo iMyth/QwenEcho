@@ -25,8 +25,7 @@ void main() {
       expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
     });
 
-    testWidgets('displays memory warning on MemoryWarningMessage',
-        (tester) async {
+    testWidgets('displays error message on ErrorMessage', (tester) async {
       final controller = StreamController<EchoMessage>.broadcast();
       addTearDown(controller.close);
 
@@ -40,40 +39,10 @@ void main() {
         ),
       ));
 
-      controller.add(const MemoryWarningMessage(
-        currentBytes: 2200000000,
-        limitBytes: 2500000000,
-        level: 1,
-      ));
+      controller.add(const ErrorMessage(code: 1, detail: 'Model load failed'));
       await tester.pump();
 
-      expect(find.textContaining('Memory warning'), findsOneWidget);
-      expect(find.textContaining('88%'), findsOneWidget);
-    });
-
-    testWidgets('displays critical memory warning for level 2',
-        (tester) async {
-      final controller = StreamController<EchoMessage>.broadcast();
-      addTearDown(controller.close);
-
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: Stack(
-            children: [
-              WarningOverlay(messages: controller.stream),
-            ],
-          ),
-        ),
-      ));
-
-      controller.add(const MemoryWarningMessage(
-        currentBytes: 2400000000,
-        limitBytes: 2500000000,
-        level: 2,
-      ));
-      await tester.pump();
-
-      expect(find.textContaining('CRITICAL'), findsOneWidget);
+      expect(find.textContaining('Model load failed'), findsOneWidget);
     });
 
     testWidgets('displays latency warning on LatencyWarningMessage',
@@ -94,13 +63,11 @@ void main() {
       controller.add(const LatencyWarningMessage(
         stage: 'ASR',
         actualMs: 350,
-        budgetMs: 200,
       ));
       await tester.pump();
 
       expect(find.textContaining('ASR latency'), findsOneWidget);
       expect(find.textContaining('350ms'), findsOneWidget);
-      expect(find.textContaining('200ms'), findsOneWidget);
     });
 
     testWidgets('limits visible warnings to maxVisible', (tester) async {
@@ -121,12 +88,12 @@ void main() {
       ));
 
       // Send 3 warnings.
-      controller.add(const LatencyWarningMessage(
-          stage: 'ASR', actualMs: 300, budgetMs: 200));
-      controller.add(const LatencyWarningMessage(
-          stage: 'LLM', actualMs: 600, budgetMs: 450));
-      controller.add(const LatencyWarningMessage(
-          stage: 'TTS', actualMs: 200, budgetMs: 100));
+      controller
+          .add(const LatencyWarningMessage(stage: 'ASR', actualMs: 300));
+      controller
+          .add(const LatencyWarningMessage(stage: 'LLM', actualMs: 600));
+      controller
+          .add(const LatencyWarningMessage(stage: 'TTS', actualMs: 200));
       await tester.pump();
 
       // Only 2 visible (max), oldest dropped.
@@ -158,8 +125,8 @@ void main() {
         ),
       ));
 
-      controller.add(const LatencyWarningMessage(
-          stage: 'ASR', actualMs: 350, budgetMs: 200));
+      controller.add(
+          const LatencyWarningMessage(stage: 'ASR', actualMs: 350));
       await tester.pump();
 
       expect(find.textContaining('ASR'), findsOneWidget);
@@ -187,9 +154,9 @@ void main() {
       ));
 
       controller.add(const AsrPartialMessage(
-          speakerId: 0, text: 'hello', timestampMs: 100));
-      controller.add(const ThermalStateMessage(
-          thermalMode: 1, temperatureC: 44.0));
+          speakerId: 0, text: 'hello', segmentId: 0));
+      controller
+          .add(const ThermalStateMessage(mode: 1, detail: 'Throttle'));
       await tester.pump();
 
       // No warnings displayed.

@@ -27,14 +27,9 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  # Do NOT use use_frameworks! — we need the native engine as a static .a
-  # so its symbols end up directly in the Runner binary for Dart FFI.
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-
-  # QwenEcho native engine (compiled from local C/C++ sources)
-  pod 'qwen_echo_engine', :path => '../native', :modular_headers => false
 end
 
 post_install do |installer|

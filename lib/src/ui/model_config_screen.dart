@@ -1,13 +1,12 @@
 /// Model configuration & management screen.
 ///
-/// Lists the three required GGUF models (ASR / LLM / TTS) with their on-disk
-/// status, and lets the user import each model from local device storage or
-/// remove it. All provisioning is local — no network is used.
+/// Lists the required MLX models with their on-disk status, and lets the
+/// user remove each model. All provisioning is local — no network is used.
+/// ASR uses SFSpeechRecognizer (built-in, no model needed); TTS is deferred.
 library;
 
 import 'dart:async';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../model/model_catalog.dart';
@@ -30,9 +29,6 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
 
   List<ModelStatus>? _statuses;
 
-  /// Per-model in-flight import progress, keyed by [ModelKind].
-  final Map<ModelKind, double> _importing = <ModelKind, double>{};
-
   @override
   void initState() {
     super.initState();
@@ -43,33 +39,6 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
     final statuses = await widget.repository.statusAll();
     if (!mounted) return;
     setState(() => _statuses = statuses);
-  }
-
-  Future<void> _import(ModelSpec spec) async {
-    // Pick any file via the system document picker. We deliberately do NOT
-    // filter by extension because .gguf has no registered iOS UTI — passing
-    // an extension filter makes UIDocumentPickerViewController fail silently
-    // on iOS. The repository validates the GGUF magic bytes and size instead.
-    final XFile? file = await openFile();
-    final sourcePath = file?.path;
-    if (sourcePath == null) return; // user cancelled
-
-    setState(() => _importing[spec.kind] = 0.0);
-
-    try {
-      await for (final p in widget.repository.importModel(spec, sourcePath)) {
-        if (!mounted) return;
-        setState(() => _importing[spec.kind] = p.fraction);
-      }
-      await _refresh();
-      _toast('${spec.displayName} imported.');
-    } on ModelImportException catch (e) {
-      _toast(e.message, error: true);
-    } catch (e) {
-      _toast('Import failed: $e', error: true);
-    } finally {
-      if (mounted) setState(() => _importing.remove(spec.kind));
-    }
   }
 
   Future<void> _delete(ModelSpec spec) async {
@@ -138,10 +107,9 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
                   const SizedBox(height: 8),
                   for (final status in statuses) _ModelCard(
                     status: status,
-                    progress: _importing[status.spec.kind],
                     accent: _accent,
-                    onImport: () => _import(status.spec),
                     onDelete: () => _delete(status.spec),
+                    onRefresh: _refresh,
                   ),
                 ],
               ),
@@ -187,7 +155,7 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  'Import GGUF/INT4 files from local storage · offline',
+                  'MLX models · copy directories into app sandbox · offline',
                   style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
                 ),
               ],
@@ -199,26 +167,23 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
   }
 }
 
-/// A single model row with status and import/delete actions.
+/// A single model row with status and delete action.
 class _ModelCard extends StatelessWidget {
   final ModelStatus status;
-  final double? progress; // null = not importing
   final Color accent;
-  final VoidCallback onImport;
   final VoidCallback onDelete;
+  final VoidCallback onRefresh;
 
   const _ModelCard({
     required this.status,
-    required this.progress,
     required this.accent,
-    required this.onImport,
     required this.onDelete,
+    required this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
     final spec = status.spec;
-    final importing = progress != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -257,21 +222,6 @@ class _ModelCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _detailLine(),
-          if (importing) ...[
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                backgroundColor: const Color(0xFF2A2A2A),
-                valueColor: AlwaysStoppedAnimation(accent),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text('Importing… ${((progress ?? 0) * 100).toStringAsFixed(0)}%',
-                style: TextStyle(color: accent, fontSize: 11)),
-          ],
         ],
       ),
     );
@@ -298,8 +248,8 @@ class _ModelCard extends StatelessWidget {
     Color color = const Color(0xFF9E9E9E);
     if (!status.present) {
       text = 'Not installed · max ${formatBytes(status.spec.maxSizeBytes)}';
-    } else if (!status.validGguf) {
-      text = 'Invalid file · not a GGUF model';
+    } else if (!status.validMlx) {
+      text = 'Invalid · not an MLX model directory';
       color = const Color(0xFFFF5252);
     } else if (status.exceedsSizeLimit) {
       text = 'Oversized · ${formatBytes(status.sizeBytes)}';
@@ -312,13 +262,6 @@ class _ModelCard extends StatelessWidget {
   }
 
   Widget _actionButton() {
-    if (progress != null) {
-      return const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E676)),
-      );
-    }
     if (status.present) {
       return IconButton(
         tooltip: 'Remove',
@@ -327,9 +270,9 @@ class _ModelCard extends StatelessWidget {
       );
     }
     return TextButton.icon(
-      onPressed: onImport,
-      icon: const Icon(Icons.folder_open, size: 18),
-      label: const Text('Import'),
+      onPressed: onRefresh,
+      icon: const Icon(Icons.refresh, size: 18),
+      label: const Text('Refresh'),
       style: TextButton.styleFrom(foregroundColor: accent),
     );
   }

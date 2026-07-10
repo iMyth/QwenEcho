@@ -10,14 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  ffi: ^2.1.3
   # Local model provisioning (air-gapped): resolve the app sandbox directory
-  # and import GGUF model files from on-device storage. No network is used.
-  # file_selector is used instead of file_picker to avoid the heavy
-  # DKImagePickerController/SDWebImage iOS dependencies (network fetch at build
-  # time); we only ever pick .gguf files via the system document picker.
+  # for MLX model directories. No network is used.
   path_provider: ^2.1.4
-  file_selector: ^1.0.3
 
 # The pub-cache copy of path_provider_foundation 2.6.0 is incomplete (missing its
 # darwin/ native sources + podspec) due to an interrupted download, which breaks
@@ -33,8 +28,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Bundle GGUF model files into the app for local debugging. The native
-  # engine memory-maps them directly from the read-only app bundle — no
-  # runtime copy is needed. Remove this entry for production builds.
-  assets:
-    - models/

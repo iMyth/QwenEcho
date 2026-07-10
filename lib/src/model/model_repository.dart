@@ -1,71 +1,52 @@
 /// Local model provisioning service (air-gapped, no network).
 ///
-/// Resolves the application sandbox directory, imports GGUF model files from
-/// on-device storage into a private `models/` folder, validates them, reports
-/// per-model status, and hands resolved paths to the engine.
+/// Resolves the application sandbox directory, validates MLX model directories
+/// (containing config.json + model.safetensors), reports per-model status,
+/// and hands resolved paths to the engine.
 ///
-/// This service performs ZERO network I/O — it only copies files that already
-/// exist on the device, satisfying QwenEcho's air-gapped policy (Req 13.2).
+/// This service performs ZERO network I/O — it only validates directories that
+/// already exist on the device, satisfying QwenEcho's air-gapped policy.
 library;
 
-import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
 import 'model_catalog.dart';
-
-/// GGUF magic bytes, little-endian 0x46475547 → ASCII "GGUF".
-const List<int> _kGgufMagic = <int>[0x47, 0x47, 0x55, 0x46];
 
 /// Status of a single model on disk.
 class ModelStatus {
   /// The model this status describes.
   final ModelSpec spec;
 
-  /// Absolute path where the model is (or would be) stored in the sandbox.
+  /// Absolute path where the model directory is (or would be) stored.
   final String path;
 
-  /// Whether the file exists on disk.
+  /// Whether the model directory exists on disk.
   final bool present;
 
-  /// On-disk size in bytes (0 if absent).
+  /// On-disk size of the model directory in bytes (0 if absent).
   final int sizeBytes;
 
-  /// Whether the file passed GGUF magic-byte validation.
-  final bool validGguf;
+  /// Whether the directory contains a valid MLX model (config.json present).
+  final bool validMlx;
 
   const ModelStatus({
     required this.spec,
     required this.path,
     required this.present,
     required this.sizeBytes,
-    required this.validGguf,
+    required this.validMlx,
   });
 
-  /// True when the model is present and passes basic validation.
-  bool get isReady => present && validGguf;
+  /// True when the model is present and passes validation.
+  bool get isReady => present && validMlx;
 
-  /// True when the file exceeds its allowed on-disk ceiling.
+  /// True when the directory exceeds its allowed on-disk ceiling.
   bool get exceedsSizeLimit => present && sizeBytes > spec.maxSizeBytes;
 }
 
-/// Progress event emitted while importing (copying) a model file.
-class ModelImportProgress {
-  /// Bytes copied so far.
-  final int copied;
-
-  /// Total bytes to copy (0 if unknown).
-  final int total;
-
-  const ModelImportProgress(this.copied, this.total);
-
-  /// Copy completion fraction in [0.0, 1.0]; 0 when total is unknown.
-  double get fraction => total > 0 ? (copied / total).clamp(0.0, 1.0) : 0.0;
-}
-
-/// Thrown when importing a model fails validation or I/O.
+/// Thrown when validating a model fails.
 class ModelImportException implements Exception {
   final String message;
   const ModelImportException(this.message);
@@ -73,14 +54,15 @@ class ModelImportException implements Exception {
   String toString() => 'ModelImportException: $message';
 }
 
-/// Manages local storage and provisioning of the required GGUF models.
+/// Manages local storage and provisioning of the required MLX models.
+///
+/// MLX models are directories containing config.json, model.safetensors,
+/// tokenizer.json, and other files. This class validates directory structure
+/// and computes sizes.
 class ModelRepository {
   Directory? _cachedDir;
 
   /// Resolve (and lazily create) the sandbox `models/` directory.
-  ///
-  /// Uses the application support directory, which lives inside the app
-  /// sandbox on both Android and iOS and is not user-visible or shared.
   Future<Directory> modelsDir() async {
     if (_cachedDir != null) return _cachedDir!;
     final base = await getApplicationSupportDirectory();
@@ -92,58 +74,55 @@ class ModelRepository {
     return dir;
   }
 
-  /// Absolute destination path for [spec] inside the sandbox.
+  /// Absolute directory path for [spec] inside the sandbox.
   Future<String> pathFor(ModelSpec spec) async {
     final dir = await modelsDir();
-    return '${dir.path}/${spec.fileName}';
+    return '${dir.path}/${spec.dirName}';
   }
 
   /// Compute the status of a single model.
   ///
-  /// Checks the user-imported sandbox copy first; if not found, falls back
-  /// to a model bundled in the app's Flutter assets (read-only). This allows
-  /// shipping pre-bundled models for development/debugging while still letting
-  /// users override them with their own imports.
+  /// Checks the user-imported sandbox copy. An MLX model is valid when
+  /// its directory contains a `config.json` file.
   Future<ModelStatus> statusFor(ModelSpec spec) async {
-    // 1. User-imported copy in the writable sandbox.
-    final sandboxPath = await pathFor(spec);
-    final sandboxFile = File(sandboxPath);
-    if (await sandboxFile.exists()) {
-      final size = await sandboxFile.length();
-      final valid = await _hasGgufMagic(sandboxFile);
+    final modelPath = await pathFor(spec);
+    final modelDir = Directory(modelPath);
+
+    if (await modelDir.exists()) {
+      final size = await _directorySize(modelDir);
+      final valid = await _hasMlxConfig(modelDir);
       return ModelStatus(
         spec: spec,
-        path: sandboxPath,
+        path: modelPath,
         present: true,
         sizeBytes: size,
-        validGguf: valid,
+        validMlx: valid,
       );
     }
 
-    // 2. Pre-bundled copy in Flutter assets (read-only, mmap-able).
+    // Check for pre-bundled copy in Flutter assets.
     final bundledPath = _bundledPathFor(spec);
     if (bundledPath != null) {
-      final bundledFile = File(bundledPath);
-      if (await bundledFile.exists()) {
-        final size = await bundledFile.length();
-        final valid = await _hasGgufMagic(bundledFile);
+      final bundledDir = Directory(bundledPath);
+      if (await bundledDir.exists()) {
+        final size = await _directorySize(bundledDir);
+        final valid = await _hasMlxConfig(bundledDir);
         return ModelStatus(
           spec: spec,
           path: bundledPath,
           present: true,
           sizeBytes: size,
-          validGguf: valid,
+          validMlx: valid,
         );
       }
     }
 
-    // 3. Not found in either location.
     return ModelStatus(
       spec: spec,
-      path: sandboxPath,
+      path: modelPath,
       present: false,
       sizeBytes: 0,
-      validGguf: false,
+      validMlx: false,
     );
   }
 
@@ -167,79 +146,11 @@ class ModelRepository {
     return {for (final s in all) s.spec.kind: s.path};
   }
 
-  /// Import a model by copying [sourcePath] into the sandbox as [spec].
-  ///
-  /// Emits [ModelImportProgress] events while copying and completes when the
-  /// file is fully written and validated. The copy is streamed so large files
-  /// (multi-GB LLM weights) do not need to fit in memory.
-  ///
-  /// Throws [ModelImportException] if the source is missing, the header is not
-  /// a valid GGUF magic, or the file exceeds the allowed size ceiling.
-  Stream<ModelImportProgress> importModel(
-    ModelSpec spec,
-    String sourcePath,
-  ) async* {
-    final source = File(sourcePath);
-    if (!await source.exists()) {
-      throw const ModelImportException('Source file does not exist.');
-    }
-
-    final total = await source.length();
-    if (total == 0) {
-      throw const ModelImportException('Source file is empty.');
-    }
-    if (total > spec.maxSizeBytes) {
-      throw ModelImportException(
-        'File is ${_fmtBytes(total)}, exceeding the '
-        '${_fmtBytes(spec.maxSizeBytes)} limit for ${spec.displayName}.',
-      );
-    }
-
-    // Validate GGUF magic before committing to a large copy.
-    if (!await _hasGgufMagic(source)) {
-      throw const ModelImportException(
-        'Not a valid GGUF file (missing "GGUF" magic bytes).',
-      );
-    }
-
-    final destPath = await pathFor(spec);
-    final tmpPath = '$destPath.part';
-    final tmp = File(tmpPath);
-    if (await tmp.exists()) {
-      await tmp.delete();
-    }
-
-    final sink = tmp.openWrite();
-    var copied = 0;
-    try {
-      await for (final chunk in source.openRead()) {
-        sink.add(chunk);
-        copied += chunk.length;
-        yield ModelImportProgress(copied, total);
-      }
-      await sink.flush();
-      await sink.close();
-    } catch (e) {
-      await sink.close();
-      if (await tmp.exists()) await tmp.delete();
-      throw ModelImportException('Copy failed: $e');
-    }
-
-    // Atomically move the completed temp file into place.
-    final dest = File(destPath);
-    if (await dest.exists()) {
-      await dest.delete();
-    }
-    await tmp.rename(destPath);
-
-    yield ModelImportProgress(total, total);
-  }
-
-  /// Delete a model file from the sandbox. Safe to call when absent.
+  /// Delete a model directory from the sandbox. Safe to call when absent.
   Future<void> deleteModel(ModelSpec spec) async {
-    final file = File(await pathFor(spec));
-    if (await file.exists()) {
-      await file.delete();
+    final dir = Directory(await pathFor(spec));
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
     }
   }
 
@@ -247,12 +158,9 @@ class ModelRepository {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  /// Filesystem path to the Flutter assets directory inside the app bundle
-  /// (read-only). Returns null on platforms where this path is unavailable.
+  /// Filesystem path to the Flutter assets directory inside the app bundle.
   String? get _flutterAssetsDir {
     if (!Platform.isIOS && !Platform.isMacOS) return null;
-    // Platform.executable on iOS = .../Runner.app/Runner
-    // Flutter assets = .../Runner.app/Frameworks/App.framework/flutter_assets
     final bundleDir = File(Platform.executable).parent;
     return '${bundleDir.path}/Frameworks/App.framework/flutter_assets';
   }
@@ -261,24 +169,32 @@ class ModelRepository {
   String? _bundledPathFor(ModelSpec spec) {
     final dir = _flutterAssetsDir;
     if (dir == null) return null;
-    return '$dir/models/${spec.fileName}';
+    return '$dir/models/${spec.dirName}';
   }
 
-  Future<bool> _hasGgufMagic(File file) async {
-    RandomAccessFile? raf;
+  /// Check if a directory contains config.json (MLX model validation).
+  Future<bool> _hasMlxConfig(Directory dir) async {
     try {
-      raf = await file.open();
-      final Uint8List head = await raf.read(4);
-      if (head.length < 4) return false;
-      for (var i = 0; i < 4; i++) {
-        if (head[i] != _kGgufMagic[i]) return false;
-      }
-      return true;
+      final configFile = File('${dir.path}/config.json');
+      return await configFile.exists();
     } catch (_) {
       return false;
-    } finally {
-      await raf?.close();
     }
+  }
+
+  /// Recursively compute the total size of a directory in bytes.
+  Future<int> _directorySize(Directory dir) async {
+    int total = 0;
+    try {
+      await for (final entity in dir.list(recursive: true)) {
+        if (entity is File) {
+          total += await entity.length();
+        }
+      }
+    } catch (_) {
+      // Ignore errors, return what we have.
+    }
+    return total;
   }
 
   static String _fmtBytes(int bytes) {

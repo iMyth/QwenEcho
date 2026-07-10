@@ -86,17 +86,15 @@ class _WarningOverlayState extends State<WarningOverlay> {
 
   void _onMessage(EchoMessage message) {
     switch (message) {
-      case MemoryWarningMessage():
-        _addWarning(
-          message: _formatMemoryWarning(message),
-          color: message.level >= 2
-              ? const Color(0xFFFF5252) // Red for critical
-              : const Color(0xFFFFA726), // Orange for warning
-        );
       case LatencyWarningMessage():
         _addWarning(
           message: _formatLatencyWarning(message),
           color: const Color(0xFFFFD54F), // Amber for latency
+        );
+      case ErrorMessage():
+        _addWarning(
+          message: message.detail,
+          color: const Color(0xFFFF5252), // Red for errors
         );
       default:
         break;
@@ -128,16 +126,8 @@ class _WarningOverlayState extends State<WarningOverlay> {
     }
   }
 
-  String _formatMemoryWarning(MemoryWarningMessage msg) {
-    final pct = msg.usagePercent.toStringAsFixed(0);
-    if (msg.level >= 2) {
-      return 'CRITICAL: Memory at $pct% — pipeline may stop';
-    }
-    return 'Memory warning: usage at $pct%';
-  }
-
   String _formatLatencyWarning(LatencyWarningMessage msg) {
-    return '${msg.stage} latency: ${msg.actualMs}ms (budget: ${msg.budgetMs}ms)';
+    return '${msg.stage} latency: ${msg.actualMs}ms';
   }
 
   @override

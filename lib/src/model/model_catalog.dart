@@ -1,25 +1,24 @@
-/// Static catalog of the GGUF/INT4 models QwenEcho requires.
+/// Static catalog of the MLX models QwenEcho requires.
 ///
-/// QwenEcho runs three on-device models entirely offline. Model files are
+/// QwenEcho runs on-device inference entirely offline. The LLM model file is
 /// provisioned locally (imported from device storage into the app sandbox) —
-/// there is NO network download. This catalog defines the expected filename,
-/// display metadata, and on-disk size ceiling for each model so the model
+/// there is NO network download. This catalog defines the expected directory
+/// name, display metadata, and on-disk size ceiling for each model so the model
 /// configuration screen can report status and validate imports.
 ///
-/// The filenames below are the spec defaults; adjust them here if your model
-/// artifacts use different names.
+/// MLX models are directories containing config.json, model.safetensors,
+/// and tokenizer.json.
 library;
 
-/// The kind of model, matching the native engine's `ModelType` ordering
-/// (ASR = 0, LLM = 1, TTS = 2).
+/// The kind of model, matching the pipeline stage order (ASR = 0, LLM = 1, TTS = 2).
 enum ModelKind {
-  /// Automatic Speech Recognition (Qwen3-ASR-0.6B).
+  /// Automatic Speech Recognition (SFSpeechRecognizer — no model file needed).
   asr,
 
-  /// Bilingual translation LLM (Qwen3-1.7B).
+  /// Bilingual translation LLM (Qwen3-1.7B via MLX).
   llm,
 
-  /// Text-to-Speech (Qwen3-TTS-12Hz-0.6B-Base).
+  /// Text-to-Speech (deferred — Phase 5).
   tts,
 }
 
@@ -34,8 +33,9 @@ class ModelSpec {
   /// Model family/version subtitle shown in the UI.
   final String subtitle;
 
-  /// Canonical filename stored inside the app sandbox `models/` directory.
-  final String fileName;
+  /// Canonical directory name stored inside the app sandbox `models/` directory.
+  /// An MLX model is a directory containing config.json, model.safetensors, etc.
+  final String dirName;
 
   /// Maximum permitted on-disk size in bytes (per Requirement 16).
   final int maxSizeBytes;
@@ -44,34 +44,22 @@ class ModelSpec {
     required this.kind,
     required this.displayName,
     required this.subtitle,
-    required this.fileName,
+    required this.dirName,
     required this.maxSizeBytes,
   });
 }
 
-/// The three models required to run the interpretation pipeline, in pipeline
-/// order (ASR → LLM → TTS).
+/// The models required to run the interpretation pipeline.
+///
+/// Only the LLM model needs to be imported — ASR uses SFSpeechRecognizer
+/// (built into iOS, no model file needed) and TTS is deferred to Phase 5.
 const List<ModelSpec> kRequiredModels = <ModelSpec>[
   ModelSpec(
-    kind: ModelKind.asr,
-    displayName: 'Qwen3-ASR-0.6B',
-    subtitle: 'Speech Recognition · Q4_K · 11 languages',
-    fileName: 'qwen3_asr_0.6b_q4_k.gguf',
-    maxSizeBytes: 600 * 1024 * 1024, // 577MB actual; 600MB ceiling
-  ),
-  ModelSpec(
     kind: ModelKind.llm,
-    displayName: 'Qwen3-1.7B',
-    subtitle: 'Bilingual Translation · Q4_K_M',
-    fileName: 'Qwen3-1.7B-Q4_K_M.gguf',
-    maxSizeBytes: 1200 * 1024 * 1024, // ~1.1GB actual; 1.2GB ceiling
-  ),
-  ModelSpec(
-    kind: ModelKind.tts,
-    displayName: 'Qwen3-TTS-0.6B',
-    subtitle: 'Speech Synthesis · Q4_K · 12Hz',
-    fileName: 'qwen3-tts-12hz-0.6b-base-q4_k.gguf',
-    maxSizeBytes: 560 * 1024 * 1024, // 533MB actual; 560MB ceiling
+    displayName: 'Qwen3-1.7B-4bit',
+    subtitle: 'Bilingual Translation · MLX 4-bit',
+    dirName: 'qwen3-1.7b-4bit-mlx',
+    maxSizeBytes: 1200 * 1024 * 1024, // ~1GB expected; 1.2GB ceiling
   ),
 ];
 
