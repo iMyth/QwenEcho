@@ -1,0 +1,1 @@
+C ABI surface that abstracts Android/iOS audio capture, thermal monitoring, memory limits, thread priority, and NPU/GPU inference acceleration, plus the C++ bridge posting typed messages to a Dart native port.

@@ -1,0 +1,1 @@
+Kiro feature spec for QwenEcho, an on-device simultaneous interpretation app combining Flutter UI with a C/C++ native ASR-LLM-TTS inference pipeline.

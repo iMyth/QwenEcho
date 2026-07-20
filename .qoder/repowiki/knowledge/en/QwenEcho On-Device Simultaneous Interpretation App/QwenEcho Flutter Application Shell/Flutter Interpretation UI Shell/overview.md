@@ -1,0 +1,1 @@
+Flutter presentation layer providing the bilateral split-screen interpretation view, model import screen, status bar, and transient warning overlays for the offline speech pipeline.

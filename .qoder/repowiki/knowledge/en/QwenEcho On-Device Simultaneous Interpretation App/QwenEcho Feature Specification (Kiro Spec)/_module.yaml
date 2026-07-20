@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: kiro_specs
+title: QwenEcho Feature Specification (Kiro Spec)
+scope:
+    - .kiro/specs/qwen-echo/
+source_files: []
+depends_on: []
+related_to: []

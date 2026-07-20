@@ -1,0 +1,5 @@
+- Each monitor exposes a C ABI via `extern "C"` blocks around its public functions, while keeping internal state in a private heap-allocated struct behind an opaque pointer.
+- Lifecycle follows a uniform pattern: `*_create` allocates + stores callback/user_data, `*_start` sets an atomic `running` flag and launches a thread, `*_stop` flips the flag, notifies a condition variable, joins the thread, then resets the flag, and `*_destroy` calls stop before freeing.
+- State transitions use hysteresis with separate upper/lower thresholds (e.g. 43 °C → throttle vs 42 °C → normal, 95 % → critical vs 85 % → warning) to avoid flapping.
+- Cross-thread state is read/written exclusively through `std::atomic<T>` with explicit `memory_order_acquire`/`memory_order_release` semantics rather than mutexes.
+- On every state change the module both invokes the registered user callback and posts a corresponding `MSG_*` event via `native_port_post_*` so the UI shell can react independently.

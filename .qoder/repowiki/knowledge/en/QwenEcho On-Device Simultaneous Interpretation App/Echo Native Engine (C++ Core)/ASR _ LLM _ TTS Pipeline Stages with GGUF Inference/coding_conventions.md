@@ -1,0 +1,6 @@
+- Every stage exposes an `extern "C"` boundary around its public API so higher-level code can link against the stage without C++ name mangling.
+- Inference is dual-path: a `real_*` helper calls `gguf_inference_generate` when `GgufContext*` is non-null, otherwise returns deterministic placeholder tokens/audio, allowing the same stage to run in stub mode at build time.
+- SLA budgets are enforced by measuring elapsed time around the first output event and reporting violations through `native_port_post_latency_warning("STAGE", ms, BUDGET)`.
+- Worker threads are signalled to stop by setting an `atomic<bool> running` to false and notifying condition variables, then joined before destruction.
+- Cross-stage payloads are copied into fixed-size `element.text` buffers with explicit length fields, truncating via `memcpy` capped at `sizeof(element.text)-1`.
+- Logging uses a platform macro `ECHO_LOG` that maps to `os_log` on macOS and `fprintf(stderr, ...)` elsewhere.

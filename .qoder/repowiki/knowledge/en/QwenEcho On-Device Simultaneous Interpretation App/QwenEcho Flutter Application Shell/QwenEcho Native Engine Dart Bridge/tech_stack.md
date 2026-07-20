@@ -1,0 +1,1 @@
+Dart FFI (`dart:ffi`, `package:ffi/ffi.dart`) binding to a C/C++ shared library named `libqwen_echo.{so,dylib}`; async messaging via `dart:isolate` `SendPort`/`ReceivePort` rather than streams-to-native callbacks.

@@ -1,0 +1,2 @@
+- Cross-layer communication uses a single typed `Stream<EchoMessage>` produced by `EchoEngine`; subscribers switch on message subtypes rather than calling imperative setters.
+- Public API surface is curated through `qwen_echo.dart` which re-exports only selected symbols from `src/` packages, hiding internal files like `native_bridge.dart` and `port_manager.dart`.

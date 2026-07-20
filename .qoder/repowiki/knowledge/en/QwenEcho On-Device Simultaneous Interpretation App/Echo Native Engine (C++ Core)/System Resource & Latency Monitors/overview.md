@@ -1,0 +1,1 @@
+Background monitors that poll platform HALs for thermal, memory, and end-to-end latency budgets and escalate via user callbacks plus the Native Port messaging layer.

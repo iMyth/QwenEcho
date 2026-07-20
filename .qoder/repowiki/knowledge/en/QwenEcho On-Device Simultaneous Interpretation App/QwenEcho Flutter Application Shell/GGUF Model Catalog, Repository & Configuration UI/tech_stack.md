@@ -1,0 +1,1 @@
+Dart + Flutter UI; uses `path_provider` for sandbox access, `file_selector` for system document picker (no extension filter because `.gguf` lacks an iOS UTI), and raw `dart:io` `RandomAccessFile` reads for GGUF magic-byte validation — no network or third-party inference libraries at this layer.

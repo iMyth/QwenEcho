@@ -1,0 +1,1 @@
+C++17 with CMake for build, llama.cpp pulled as a git submodule under `third_party/llama.cpp`, and a thin Dart FFI bridge (`dart_api_dl.c`) plus CocoaPods podspec (`qwen_echo_engine.podspec`) for iOS integration.

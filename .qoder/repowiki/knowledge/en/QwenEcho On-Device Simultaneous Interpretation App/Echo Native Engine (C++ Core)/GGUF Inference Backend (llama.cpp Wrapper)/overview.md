@@ -1,0 +1,1 @@
+Thin C++ wrapper around the llama.cpp library that loads GGUF models and performs tokenization, greedy decoding, and detokenization for ASR/LLM/TTS stages.

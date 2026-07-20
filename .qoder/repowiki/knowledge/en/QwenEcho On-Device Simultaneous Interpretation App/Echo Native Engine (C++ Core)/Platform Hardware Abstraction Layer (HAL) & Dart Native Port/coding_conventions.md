@@ -1,0 +1,4 @@
+- Every HAL subsystem follows an opaque-handle + create/start/stop/destroy lifecycle exposed as `extern "C"` functions taking a struct pointer returned by its `*_create` counterpart.
+- Each HAL header guards its body with `#ifndef HAL_<NAME>_H` / `#define ...` and wraps declarations in `#ifdef __cplusplus extern "C" { ... }` so both C and C++ callers can include it.
+- Message-posting helpers build a stack-allocated `Dart_CObject` array whose first element is a `MSG_*` enum constant, then forward through a single `post_message()` that checks the atomic port state before calling the stored `PostFn`.
+- Cross-thread shared state in native_port.cpp is modeled as `std::atomic<T>` globals (`g_port_id`, `g_port_registered`, `g_post_fn`) accessed with explicit acquire/release ordering rather than mutexes.

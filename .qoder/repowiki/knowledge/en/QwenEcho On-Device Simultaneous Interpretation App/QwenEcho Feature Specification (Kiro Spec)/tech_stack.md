@@ -1,0 +1,1 @@
+Kiro spec format targeting a Flutter/Dart UI shell communicating via Dart FFI to a C++17 native engine built with CMake, using ggml-backed GGUF/INT4 models (FunASR-Nano, Qwen3-4B-Instruct, Qwen3-TTS-Streaming), RapidCheck for C++ property tests and fast-check for Dart-side property tests.

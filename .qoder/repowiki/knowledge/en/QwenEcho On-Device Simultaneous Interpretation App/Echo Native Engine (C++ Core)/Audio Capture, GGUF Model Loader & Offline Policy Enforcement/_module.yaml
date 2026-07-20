@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: native_engine/shared_utilities
+title: Audio Capture, GGUF Model Loader & Offline Policy Enforcement
+scope:
+    - native/src/audio_collector.cpp
+    - native/src/model_loader.cpp
+    - native/src/offline_policy.cpp
+source_files: []
+depends_on: []
+related_to: []

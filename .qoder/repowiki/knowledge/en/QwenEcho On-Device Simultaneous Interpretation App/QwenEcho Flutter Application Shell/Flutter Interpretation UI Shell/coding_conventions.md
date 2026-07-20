@@ -1,0 +1,6 @@
+- UI state is exposed through a separate `State` class paired with a `GlobalKey` on the parent, giving the parent direct imperative methods (e.g. `addLine`, `updateLastLine`, `clear`) instead of widget props.
+- Transient notifications are modeled as immutable value objects (`_WarningEntry`, `DisplayLine`) with explicit `isExpired` / `copyWith` helpers rather than ad-hoc maps.
+- Stream subscriptions are always cancelled in `dispose()` and guarded with `if (!mounted)` before `setState` to avoid post-dispose rebuilds.
+- Auto-scrolling to the bottom after data changes is done via `WidgetsBinding.instance.addPostFrameCallback` followed by `ScrollController.animateTo(maxScrollExtent)` rather than synchronous scrolling.
+- Engine messages are dispatched with Dart pattern-matching `switch` over concrete `EchoMessage` subclasses, ignoring unknown variants in a `default` branch.
+- Testability is achieved by accepting injectable collaborators (e.g. `ModelRepository? repository`, `DateTime Function() clock`) with sensible defaults in constructors.

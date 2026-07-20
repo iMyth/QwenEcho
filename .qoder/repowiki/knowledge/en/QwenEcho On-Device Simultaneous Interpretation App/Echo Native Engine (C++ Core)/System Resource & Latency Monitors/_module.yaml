@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: native_engine/monitoring_and_tracing
+title: System Resource & Latency Monitors
+scope:
+    - native/src/latency_tracker.cpp
+    - native/src/memory_monitor.cpp
+    - native/src/thermal_monitor.cpp
+source_files: []
+depends_on: []
+related_to: []

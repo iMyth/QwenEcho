@@ -1,0 +1,1 @@
+Native engine must be built out-of-tree under `native/build` with CMake before Flutter builds can link it; Android cross-compilation requires passing `CMAKE_TOOLCHAIN_FILE` pointing at the NDK toolchain. Flutter assets include a `models/` directory of GGUF files for local debugging, which should be removed for production builds.

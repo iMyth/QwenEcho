@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: dart_app/model_management
+title: GGUF Model Catalog, Repository & Configuration UI
+scope:
+    - lib/src/model/
+    - lib/src/ui/model_config_screen.dart
+source_files: []
+depends_on: []
+related_to: []

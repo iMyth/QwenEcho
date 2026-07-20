@@ -1,0 +1,5 @@
+- Public APIs are wrapped in `extern "C"` blocks so the C++ implementation can be linked from the rest of the engine without name mangling.
+- Error paths return small negative integer codes (e.g. `-1..-4`, or named `ECHO_ERR_*` constants) rather than throwing exceptions, keeping the interface portable across platforms.
+- Real-time audio callbacks avoid all allocations, blocking calls, and mutexes; they only write to a lock-free ring buffer and update `std::atomic` counters with relaxed ordering.
+- Platform-specific behavior is isolated behind `#if defined(__ANDROID__) || defined(__linux__)` / `#if defined(__APPLE__)` guards, with a no-op fallback for desktop builds.
+- Internal state structs (`AudioCollector`, `ModelSlot`, `InferenceContext`) are opaque to callers — only pointers are passed across the `extern "C"` boundary.

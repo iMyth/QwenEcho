@@ -1,0 +1,1 @@
+Low-level native utilities that capture real-time PCM audio into a ring buffer, validate and memory-map GGUF models for ASR/LLM/TTS, and enforce an offline-only runtime policy.

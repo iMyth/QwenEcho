@@ -1,0 +1,1 @@
+Flutter Material (`package:flutter/material.dart`) with `SystemChrome` for immersive portrait-only mode; `file_picker` for local GGUF selection; `flutter/foundation.dart` ChangeNotifier for reactive text buffers.

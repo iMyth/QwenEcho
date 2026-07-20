@@ -1,0 +1,1 @@
+C++ unit and property-based tests for the native Echo engine components (ASR stage, audio collector, sentence segmenter, model loader, engine manager, echo types, native port).

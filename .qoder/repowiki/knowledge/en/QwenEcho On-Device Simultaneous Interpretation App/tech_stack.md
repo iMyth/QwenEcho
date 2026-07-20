@@ -1,0 +1,1 @@
+Flutter 3.16+ / Dart 3.2+ for the UI shell; CMake + C++17 for the native engine; llama.cpp (as a git submodule per the current change period) provides the GGUF inference backend shared across ASR, LLM, and TTS stages; RapidCheck for native property-based tests; Flutter widget tests for the UI layer.

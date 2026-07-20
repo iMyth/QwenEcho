@@ -1,0 +1,5 @@
+- `native/src/gguf_inference.cpp` is the only source file in this module; it implements a small opaque handle (`GgufContext`) holding a `llama_model*`, `llama_context*`, and a greedy `llama_sampler*`.
+- The file exposes a flat C-style API (`gguf_inference_backend_init/free`, `gguf_inference_create/destroy/reset`, `gguf_inference_generate`, `gguf_inference_generate_streaming`) so callers in ASR/LLM/TTS stages can link against it without depending on llama.cpp headers directly.
+- Internal helpers (`tokenize_prompt`, `token_to_piece`, `run_generation`) encapsulate the llama.cpp tokenization → prompt decode → single-token sampling loop → detokenization pipeline; streaming mode uses a `gguf_token_callback` user-data pattern to push pieces incrementally.
+- Dependency direction is one-way: this module depends on `native/third_party/llama.cpp` (pulled in as a git submodule) via `#include "llama.h"`; nothing inside `third_party/llama.cpp` depends back on the project.
+- Mobile-friendly defaults are baked in: mmap model loading, context window capped at 2048 tokens, batch size 512, and greedy sampling for deterministic output suitable for translation/ASR.

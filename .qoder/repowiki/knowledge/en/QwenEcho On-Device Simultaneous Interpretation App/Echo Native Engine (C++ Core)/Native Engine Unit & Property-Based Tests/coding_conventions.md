@@ -1,0 +1,6 @@
+- Each test file is an independent executable with its own `int main()` that drives either a sequence of `run_test(...)` calls or a series of `rc::check("...", [](){ ... })` blocks.
+- Property-based assertions use `RC_ASSERT` inside RapidCheck lambdas; non-RapidCheck helpers wrap conditions in a local `TEST_ASSERT` macro that prints `FAILED: <expr> (line N)` on failure.
+- Null-pointer safety is explicitly verified per API: every public function is called with `nullptr` and asserted to return a safe default (e.g. `ENGINE_UNINITIALIZED`, `ECHO_ERR_NOT_INITIALIZED`, `SEG_STATE_IDLE`, or `0`).
+- External platform services (HAL audio, thread priority, native port callbacks) are stubbed via `extern "C"` functions defined in the test file itself, keeping tests runnable without linking real platform code.
+- Test fixtures that need temporary files build minimal valid GGUF payloads in memory (`make_gguf_binary`) and write them through `write_temp_file` using `mkstemp` with a `qwen_echo_test_*` prefix, then `unlink` on teardown.
+- Tests follow a create → configure → exercise → assert → destroy lifecycle pattern, often wrapping the whole block in a lambda so destruction happens even if an assertion fails.

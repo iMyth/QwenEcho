@@ -1,0 +1,184 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: fix/ios-native-linking
+nodes_managed: true
+exported_at: "2026-07-09T03:22:18Z"
+modules:
+    "":
+        dir_name: QwenEcho On-Device Simultaneous Interpretation App
+        title: QwenEcho On-Device Simultaneous Interpretation App
+        scope:
+            - README.md
+            - .gitignore
+            - analysis_options.yaml
+            - pubspec.yaml
+            - origin.png
+        source_files: []
+        children:
+            - dart_app
+            - dart_tests
+            - ios_platform
+            - kiro_specs
+            - native_engine
+        depends_on: []
+        related_to: []
+    dart_app:
+        dir_name: QwenEcho Flutter Application Shell
+        title: QwenEcho Flutter Application Shell
+        scope:
+            - lib/
+        source_files: []
+        children:
+            - dart_app/echo_engine_core
+            - dart_app/model_management
+            - dart_app/ui_layer
+        depends_on: []
+        related_to: []
+    dart_app/echo_engine_core:
+        dir_name: QwenEcho Native Engine Dart Bridge
+        title: QwenEcho Native Engine Dart Bridge
+        scope:
+            - lib/src/echo_engine.dart
+            - lib/src/messages.dart
+            - lib/src/native_bridge.dart
+            - lib/src/port_manager.dart
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    dart_app/model_management:
+        dir_name: GGUF Model Catalog, Repository & Configuration UI
+        title: GGUF Model Catalog, Repository & Configuration UI
+        scope:
+            - lib/src/model/
+            - lib/src/ui/model_config_screen.dart
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    dart_app/ui_layer:
+        dir_name: Flutter Interpretation UI Shell
+        title: Flutter Interpretation UI Shell
+        scope:
+            - lib/src/ui/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    dart_tests:
+        dir_name: Flutter UI & Message Protocol Unit Tests
+        title: Flutter UI & Message Protocol Unit Tests
+        scope:
+            - test/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    ios_platform:
+        dir_name: iOS Runner & Native Engine Integration
+        title: iOS Runner & Native Engine Integration
+        scope:
+            - ios/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    kiro_specs:
+        dir_name: QwenEcho Feature Specification (Kiro Spec)
+        title: QwenEcho Feature Specification (Kiro Spec)
+        scope:
+            - .kiro/specs/qwen-echo/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine:
+        dir_name: Echo Native Engine (C++ Core)
+        title: Echo Native Engine (C++ Core)
+        scope:
+            - native/
+        source_files: []
+        children:
+            - native_engine/engine_core
+            - native_engine/inference_backend
+            - native_engine/monitoring_and_tracing
+            - native_engine/pipeline_stages
+            - native_engine/platform_hal
+            - native_engine/shared_utilities
+            - native_engine/tests
+        depends_on: []
+        related_to: []
+    native_engine/engine_core:
+        dir_name: Core Engine Lifecycle & Pipeline Orchestration
+        title: Core Engine Lifecycle & Pipeline Orchestration
+        scope:
+            - native/src/engine.cpp
+            - native/src/engine_manager.cpp
+            - native/src/pipeline_controller.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine/inference_backend:
+        dir_name: GGUF Inference Backend (llama.cpp Wrapper)
+        title: GGUF Inference Backend (llama.cpp Wrapper)
+        scope:
+            - native/src/gguf_inference.cpp
+            - native/third_party/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine/monitoring_and_tracing:
+        dir_name: System Resource & Latency Monitors
+        title: System Resource & Latency Monitors
+        scope:
+            - native/src/latency_tracker.cpp
+            - native/src/memory_monitor.cpp
+            - native/src/thermal_monitor.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine/pipeline_stages:
+        dir_name: ASR _ LLM _ TTS Pipeline Stages with GGUF Inference
+        title: ASR / LLM / TTS Pipeline Stages with GGUF Inference
+        scope:
+            - native/src/asr_stage.cpp
+            - native/src/llm_stage.cpp
+            - native/src/tts_stage.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine/platform_hal:
+        dir_name: Platform Hardware Abstraction Layer (HAL) & Dart Native Port
+        title: Platform Hardware Abstraction Layer (HAL) & Dart Native Port
+        scope:
+            - native/hal/
+            - native/src/native_port.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine/shared_utilities:
+        dir_name: Audio Capture, GGUF Model Loader & Offline Policy Enforcement
+        title: Audio Capture, GGUF Model Loader & Offline Policy Enforcement
+        scope:
+            - native/src/audio_collector.cpp
+            - native/src/model_loader.cpp
+            - native/src/offline_policy.cpp
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    native_engine/tests:
+        dir_name: Native Engine Unit & Property-Based Tests
+        title: Native Engine Unit & Property-Based Tests
+        scope:
+            - native/tests/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

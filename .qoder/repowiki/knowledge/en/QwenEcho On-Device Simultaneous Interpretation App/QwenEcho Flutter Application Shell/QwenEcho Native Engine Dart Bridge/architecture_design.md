@@ -1,0 +1,7 @@
+Four-file leaf module with a clear layering:
+- `native_bridge.dart` — lowest layer: `dart:ffi` typedefs + `DynamicLibrary.open` for `libqwen_echo.so` (Android/Linux) or `libqwen_echo.dylib` / `process()` (iOS/macOS), exposing four C entry points (`InitQwenEchoEngine`, `StartEchoPipeline`, `StopEchoPipeline`, `RegisterEchoMessagePort`) as typed Dart methods that throw `EchoEngineException` on non-zero return codes.
+- `port_manager.dart` — owns a `ReceivePort`, calls `NativeBridge.registerPort(nativePort)` to register it, and transforms raw `List<dynamic>` messages into typed `EchoMessage`s via a broadcast `StreamController`.
+- `messages.dart` — sealed `EchoMessage` hierarchy with a central `fromRawList` switch over `MessageType` tags; each concrete message class implements `_fromRaw(List<dynamic>)` mirroring the C-side wire format `[typeTag, ...fields]`.
+- `echo_engine.dart` — top-level facade combining the other three, enforcing an `uninitialized → ready → running` state machine across `init`/`start`/`stop`/`dispose` and re-exporting `messages`.
+
+Dependency direction is strictly one-way: `echo_engine` → (`native_bridge`, `port_manager`, `messages`); `port_manager` → (`native_bridge`, `messages`); `messages` has no intra-module deps. The UI layer talks only to `EchoEngine`; native library loading and port plumbing are hidden behind `NativeBridge.fromLibrary` (for testing/framework embedding) and `EchoEngine.withBridge`.

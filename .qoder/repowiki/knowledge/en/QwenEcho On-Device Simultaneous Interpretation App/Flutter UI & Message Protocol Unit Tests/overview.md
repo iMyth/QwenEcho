@@ -1,0 +1,1 @@
+Unit and widget tests for QwenEcho's EchoMessage protocol parser, line-buffering logic, and Flutter UI components (SplitView, StatusBar, WarningOverlay, TextDisplay).
