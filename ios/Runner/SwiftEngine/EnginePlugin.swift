@@ -1,6 +1,6 @@
 import Flutter
 import UIKit
-import Speech
+import os
 
 /// Flutter plugin bridge for the QwenEcho engine.
 ///
@@ -52,6 +52,16 @@ final class EnginePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
             pipeline.stop()
             result(nil)
 
+        case "test_inject":
+            guard let args = call.arguments as? [String: Any],
+                  let text = args["text"] as? String else {
+                result(FlutterError(code: "invalid_args", message: "Missing text", details: nil))
+                return
+            }
+            let speakerId = args["speakerId"] as? Int ?? 0
+            pipeline.injectTestText(text, speakerId: speakerId)
+            result(["success": true])
+
         case "getPlatformVersion":
             result("iOS " + UIDevice.current.systemVersion)
 
@@ -76,25 +86,15 @@ final class EnginePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
     private func handleInitialize(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: String],
+              let asrPath = args["asrPath"],
               let llmPath = args["llmPath"] else {
-            result(FlutterError(code: "invalid_args", message: "Missing llmPath", details: nil))
+            result(FlutterError(code: "invalid_args", message: "Missing asrPath or llmPath", details: nil))
             return
         }
 
-        pipeline.initialize(llmPath: llmPath)
-
-        // Request speech recognition authorization
-        Task {
-            let status = await AsrStage.requestAuthorization()
-            if status != .authorized {
-                DispatchQueue.main.async {
-                    self.messageStream.post(.error(
-                        code: -4,
-                        detail: "Speech recognition not authorized: \(status.rawValue)"
-                    ))
-                }
-            }
-        }
+        // LLM inference runs in Dart via llamadart; only ASR is native.
+        pipeline.initialize(asrPath: asrPath)
+        os_log("[EnginePlugin] LLM path passed to Dart side: %{public}@", llmPath)
 
         result(["success": true])
     }
@@ -107,7 +107,17 @@ final class EnginePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
             return
         }
 
-        pipeline.start(srcLang: srcLang, tgtLang: tgtLang)
-        result(["success": true])
+        // `pipeline.start` is async because it must request microphone
+        // permission before touching AVAudioEngine. The result callback can
+        // be invoked asynchronously — Flutter's MethodChannel supports that.
+        Task {
+            if let errorMessage = await pipeline.start(srcLang: srcLang, tgtLang: tgtLang) {
+                result(FlutterError(code: "start_failed",
+                                    message: errorMessage,
+                                    details: nil))
+            } else {
+                result(["success": true])
+            }
+        }
     }
 }
