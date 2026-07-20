@@ -56,9 +56,14 @@ class SplitViewState extends State<SplitView> {
   }
 
   /// Add ASR confirmed text to the specified speaker's half.
+  ///
+  /// If the speaker currently has a partial (gray) line, upgrades it in-place
+  /// to white so the user never sees the same sentence twice. If no partial
+  /// exists (e.g. the first confirmed arrived without a preceding partial),
+  /// adds a new confirmed line.
   void addAsrConfirmed(int speakerId, String text) {
     final state = _halfStateFor(speakerId);
-    state?.addLine(text, kAsrConfirmedColor);
+    state?.confirmLastLine(text);
   }
 
   /// Add a translation token to the opposing speaker's half.
