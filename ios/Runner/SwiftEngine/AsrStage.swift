@@ -1,165 +1,134 @@
 import Foundation
-import Speech
 import AVFoundation
 import os
 
-/// ASR stage using Apple's SFSpeechRecognizer for on-device speech recognition.
+/// ASR stage using sherpa-onnx offline recognizer with SenseVoice-Small.
 ///
-/// Takes locked audio segments from the VAD and transcribes them to text.
-/// Streams partial results via MessageStream, returns final text for LLM translation.
+/// Takes locked audio segments from the VAD, transcribes them with a
+/// sherpa-onnx offline recognizer, and posts the result through
+/// [MessageStream].
+///
+/// SenseVoice-Small is an offline (non-streaming) model that processes
+/// the entire audio segment at once. It supports auto language detection
+/// across zh, en, ja, yue, ko.
 final class AsrStage {
 
     private let messages: MessageStream
-    private var speechRecognizer: SFSpeechRecognizer?
-    private var locale: Locale = Locale(identifier: "zh-CN")
+    private var recognizer: SherpaOnnxOfflineRecognizer?
+    private var language: String = "auto"
 
     init(messages: MessageStream) {
         self.messages = messages
     }
 
-    /// Request speech recognition authorization from the user.
-    /// Must be called before using recognize().
-    static func requestAuthorization() async -> SFSpeechRecognizerAuthorizationStatus {
-        await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
-                continuation.resume(returning: status)
-            }
+    /// Load the SenseVoice-Small model package at [path].
+    ///
+    /// The package must contain `model.int8.onnx` and `tokens.txt`.
+    func loadModel(path: String) async throws {
+        let config = try buildRecognizerConfig(at: URL(fileURLWithPath: path))
+        var mutableConfig = config
+        let recognizer = withUnsafePointer(to: &mutableConfig) {
+            SherpaOnnxOfflineRecognizer(config: $0)
         }
+        self.recognizer = recognizer
+        os_log("[ASR] SenseVoice model loaded from: %{public}@", path)
     }
 
-    /// Set the recognition language.
+    /// Set the source language for recognition.
+    ///
+    /// SenseVoice supports: "auto", "zh", "en", "ja", "yue", "ko".
+    /// "auto" enables automatic language detection.
     func setLanguage(_ lang: String) {
-        let localeId = mapLanguageToLocale(lang)
-        locale = Locale(identifier: localeId)
-        speechRecognizer = SFSpeechRecognizer(locale: locale)
-        os_log("[ASR] Set language: %{public}@ (locale: %{public}@)", lang, localeId)
+        language = lang
+        os_log("[ASR] Set language: %{public}@", lang)
     }
 
     /// Recognize speech from a locked audio segment.
     /// Returns the transcribed text, or empty string on failure.
     func recognize(segment: LockedSegment) async -> String {
-        guard let speechRecognizer = speechRecognizer else {
-            os_log("[ASR] Speech recognizer not initialized")
+        guard let recognizer = recognizer else {
+            os_log("[ASR] Recognizer not initialized")
             return ""
         }
 
-        guard speechRecognizer.isAvailable else {
-            os_log("[ASR] Speech recognizer not available")
+        let samples = normalize(samples: segment.audioData)
+        guard !samples.isEmpty else {
+            os_log("[ASR] Empty audio segment")
             return ""
         }
 
-        // Convert Int16 samples to AVAudioPCMBuffer
-        guard let buffer = makePCMBuffer(from: segment.audioData) else {
-            os_log("[ASR] Failed to create PCM buffer")
-            return ""
+        // Offline recognizer processes the entire audio at once.
+        let result = recognizer.decode(samples: samples, sampleRate: 16000)
+        let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Post result for UI consumption.
+        if !text.isEmpty {
+            os_log("[ASR] Recognized (%{public}@): %{public}@",
+                   result.lang.isEmpty ? language : result.lang, text)
+            messages.post(.asrPartial(
+                speakerId: segment.speakerId,
+                text: text,
+                segmentId: segment.segmentId
+            ))
         }
 
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        request.append(buffer)
-        request.endAudio()
-
-        return await withCheckedContinuation { continuation in
-            var resumed = false
-            let lock = NSLock()
-
-            let safeResume: (String) -> Void = { text in
-                lock.lock()
-                if !resumed {
-                    resumed = true
-                    lock.unlock()
-                    continuation.resume(returning: text)
-                } else {
-                    lock.unlock()
-                }
-            }
-
-            let task = speechRecognizer.recognitionTask(with: request) { [weak self] result, error in
-                guard let self = self else {
-                    safeResume("")
-                    return
-                }
-
-                if let error = error {
-                    os_log("[ASR] Recognition error: %{public}@", error.localizedDescription)
-                    safeResume("")
-                    return
-                }
-
-                if let result = result {
-                    let text = result.bestTranscription.formattedString
-
-                    if !result.isFinal {
-                        self.messages.post(.asrPartial(
-                            speakerId: segment.speakerId,
-                            text: text,
-                            segmentId: segment.segmentId
-                        ))
-                    }
-
-                    if result.isFinal {
-                        os_log("[ASR] Recognized: %{public}@", text)
-                        safeResume(text)
-                    }
-                }
-            }
-
-            // Fallback: if recognition doesn't complete in 10s, return what we have
-            DispatchQueue.global().asyncAfter(deadline: .now() + 10) {
-                task.cancel()
-                safeResume("")
-            }
-        }
+        return text
     }
 
     // MARK: - Private
 
-    /// Convert [Int16] samples to AVAudioPCMBuffer at 16kHz mono.
-    private func makePCMBuffer(from samples: [Int16]) -> AVAudioPCMBuffer? {
-        guard !samples.isEmpty else { return nil }
+    private enum AsrError: LocalizedError {
+        case missingTokens
+        case missingModel
 
-        guard let format = AVAudioFormat(
-            commonFormat: .pcmFormatInt16,
-            sampleRate: 16000,
-            channels: 1,
-            interleaved: false
-        ) else {
-            return nil
+        var errorDescription: String? {
+            switch self {
+            case .missingTokens:
+                return "ASR package is missing tokens.txt"
+            case .missingModel:
+                return "ASR package is missing model.int8.onnx"
+            }
         }
-
-        let frameCount = AVAudioFrameCount(samples.count)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
-            return nil
-        }
-        buffer.frameLength = frameCount
-
-        guard let channelData = buffer.int16ChannelData else { return nil }
-        let destPtr = channelData[0]
-
-        for i in 0..<samples.count {
-            destPtr[i] = samples[i]
-        }
-
-        return buffer
     }
 
-    /// Map ISO 639-1 language code to locale identifier.
-    private func mapLanguageToLocale(_ lang: String) -> String {
-        switch lang {
-        case "zh": return "zh-CN"
-        case "en": return "en-US"
-        case "ja": return "ja-JP"
-        case "ko": return "ko-KR"
-        case "fr": return "fr-FR"
-        case "de": return "de-DE"
-        case "es": return "es-ES"
-        case "ru": return "ru-RU"
-        case "ar": return "ar-SA"
-        case "pt": return "pt-BR"
-        case "it": return "it-IT"
-        case "th": return "th-TH"
-        case "vi": return "vi-VN"
-        default: return "\(lang)-\(lang.uppercased())"
+    /// Convert [Int16] samples to [Float] normalized to [-1, 1].
+    private func normalize(samples: [Int16]) -> [Float] {
+        return samples.map { Float($0) / Float(Int16.max) }
+    }
+
+    /// Build a sherpa-onnx offline recognizer config for SenseVoice-Small.
+    private func buildRecognizerConfig(at dir: URL) throws -> SherpaOnnxOfflineRecognizerConfig {
+        let fm = FileManager.default
+
+        let tokensPath = dir.appendingPathComponent("tokens.txt").path
+        guard fm.fileExists(atPath: tokensPath) else {
+            throw AsrError.missingTokens
         }
+
+        // sherpa-onnx SenseVoice releases use model.int8.onnx.
+        let modelPath = dir.appendingPathComponent("model.int8.onnx").path
+        guard fm.fileExists(atPath: modelPath) else {
+            throw AsrError.missingModel
+        }
+
+        let senseVoice = sherpaOnnxOfflineSenseVoiceModelConfig(
+            model: modelPath,
+            language: language,
+            useInverseTextNormalization: true
+        )
+
+        let modelConfig = sherpaOnnxOfflineModelConfig(
+            tokens: tokensPath,
+            numThreads: 2,
+            senseVoice: senseVoice
+        )
+
+        let featConfig = sherpaOnnxFeatureConfig(sampleRate: 16000, featureDim: 80)
+
+        return sherpaOnnxOfflineRecognizerConfig(
+            featConfig: featConfig,
+            modelConfig: modelConfig,
+            decodingMethod: "greedy_search"
+        )
     }
 }

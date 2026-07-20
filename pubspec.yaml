@@ -11,8 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
   # Local model provisioning (air-gapped): resolve the app sandbox directory
-  # for MLX model directories. No network is used.
+  # for GGUF and sherpa-onnx model files. No network is used.
   path_provider: ^2.1.4
+  # Local LLM inference via llama.cpp GGUF.
+  llamadart: ^0.8.14
 
 # The pub-cache copy of path_provider_foundation 2.6.0 is incomplete (missing its
 # darwin/ native sources + podspec) due to an interrupted download, which breaks
@@ -28,3 +30,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Bundle local GGUF models into the app bundle for simulator/development.
+  # Remove before release to reduce bundle size.
+  assets:
+    - models/
+    - models/SenseVoiceSmall-onnx/

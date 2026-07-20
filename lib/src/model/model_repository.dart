@@ -1,11 +1,12 @@
 /// Local model provisioning service (air-gapped, no network).
 ///
-/// Resolves the application sandbox directory, validates MLX model directories
-/// (containing config.json + model.safetensors), reports per-model status,
-/// and hands resolved paths to the engine.
+/// Resolves the application sandbox directory, validates GGUF files and
+/// sherpa-onnx model packages, reports per-model status, and hands resolved
+/// paths to the engine.
 ///
-/// This service performs ZERO network I/O — it only validates directories that
-/// already exist on the device, satisfying QwenEcho's air-gapped policy.
+/// This service performs ZERO network I/O — it only validates files and
+/// directories that already exist on the device, satisfying QwenEcho's
+/// air-gapped policy.
 library;
 
 import 'dart:io';
@@ -28,19 +29,19 @@ class ModelStatus {
   /// On-disk size of the model directory in bytes (0 if absent).
   final int sizeBytes;
 
-  /// Whether the directory contains a valid MLX model (config.json present).
-  final bool validMlx;
+  /// Whether the model file or package passes format validation.
+  final bool valid;
 
   const ModelStatus({
     required this.spec,
     required this.path,
     required this.present,
     required this.sizeBytes,
-    required this.validMlx,
+    required this.valid,
   });
 
   /// True when the model is present and passes validation.
-  bool get isReady => present && validMlx;
+  bool get isReady => present && valid;
 
   /// True when the directory exceeds its allowed on-disk ceiling.
   bool get exceedsSizeLimit => present && sizeBytes > spec.maxSizeBytes;
@@ -54,11 +55,10 @@ class ModelImportException implements Exception {
   String toString() => 'ModelImportException: $message';
 }
 
-/// Manages local storage and provisioning of the required MLX models.
+/// Manages local storage and provisioning of the required models.
 ///
-/// MLX models are directories containing config.json, model.safetensors,
-/// tokenizer.json, and other files. This class validates directory structure
-/// and computes sizes.
+/// Validates GGUF magic bytes for the LLM file and sherpa-onnx package
+/// contents (`model.int8.onnx` + `tokens.txt`) for ASR.
 class ModelRepository {
   Directory? _cachedDir;
 
@@ -82,37 +82,78 @@ class ModelRepository {
 
   /// Compute the status of a single model.
   ///
-  /// Checks the user-imported sandbox copy. An MLX model is valid when
-  /// its directory contains a `config.json` file.
+  /// Checks the user-imported sandbox copy. Validation depends on [ModelKind]:
+  /// - LLM: a file whose first four bytes are the GGUF magic (`GGUF`).
+  /// - ASR: a directory containing `model.int8.onnx` and `tokens.txt`.
   Future<ModelStatus> statusFor(ModelSpec spec) async {
     final modelPath = await pathFor(spec);
-    final modelDir = Directory(modelPath);
 
+    // LLM is a single GGUF file.
+    if (spec.kind == ModelKind.llm) {
+      final file = File(modelPath);
+      if (await file.exists()) {
+        final size = await file.length();
+        final valid = await _isValidGguf(file);
+        return ModelStatus(
+          spec: spec,
+          path: modelPath,
+          present: true,
+          sizeBytes: size,
+          valid: valid,
+        );
+      }
+
+      final bundledPath = _bundledPathFor(spec);
+      if (bundledPath != null) {
+        final bundledFile = File(bundledPath);
+        if (await bundledFile.exists()) {
+          final size = await bundledFile.length();
+          final valid = await _isValidGguf(bundledFile);
+          return ModelStatus(
+            spec: spec,
+            path: bundledPath,
+            present: true,
+            sizeBytes: size,
+            valid: valid,
+          );
+        }
+      }
+
+      return ModelStatus(
+        spec: spec,
+        path: modelPath,
+        present: false,
+        sizeBytes: 0,
+        valid: false,
+      );
+    }
+
+    // ASR is a sherpa-onnx model package directory.
+    final modelDir = Directory(modelPath);
     if (await modelDir.exists()) {
       final size = await _directorySize(modelDir);
-      final valid = await _hasMlxConfig(modelDir);
+      final valid = await _hasSherpaOnnxPackage(modelDir);
       return ModelStatus(
         spec: spec,
         path: modelPath,
         present: true,
         sizeBytes: size,
-        validMlx: valid,
+        valid: valid,
       );
     }
 
-    // Check for pre-bundled copy in Flutter assets.
     final bundledPath = _bundledPathFor(spec);
     if (bundledPath != null) {
       final bundledDir = Directory(bundledPath);
       if (await bundledDir.exists()) {
         final size = await _directorySize(bundledDir);
-        final valid = await _hasMlxConfig(bundledDir);
+        final valid = await _hasSherpaOnnxPackage(bundledDir);
         return ModelStatus(
           spec: spec,
           path: bundledPath,
           present: true,
           sizeBytes: size,
-          validMlx: valid,
+          valid: valid,
         );
       }
     }
@@ -122,7 +163,7 @@ class ModelRepository {
       path: modelPath,
       present: false,
       sizeBytes: 0,
-      validMlx: false,
+      valid: false,
     );
   }
 
@@ -172,11 +213,28 @@ class ModelRepository {
     return '$dir/models/${spec.dirName}';
   }
 
-  /// Check if a directory contains config.json (MLX model validation).
-  Future<bool> _hasMlxConfig(Directory dir) async {
+  /// Validate a GGUF file by checking its magic bytes (`GGUF`).
+  Future<bool> _isValidGguf(File file) async {
     try {
-      final configFile = File('${dir.path}/config.json');
-      return await configFile.exists();
+      final bytes = await file.openRead(0, 4).first;
+      return bytes.length >= 4 &&
+          bytes[0] == 0x47 && // G
+          bytes[1] == 0x47 && // G
+          bytes[2] == 0x55 && // U
+          bytes[3] == 0x46; // F
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Validate a SenseVoice-Small ONNX model package directory.
+  ///
+  /// sherpa-onnx SenseVoice releases use `model.int8.onnx`.
+  Future<bool> _hasSherpaOnnxPackage(Directory dir) async {
+    try {
+      final onnx = File('${dir.path}/model.int8.onnx');
+      final tokens = File('${dir.path}/tokens.txt');
+      return await onnx.exists() && await tokens.exists();
     } catch (_) {
       return false;
     }

@@ -185,9 +185,9 @@ class _StatusBarState extends State<StatusBar> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _engineBadge('ASR', 'Speech'),
+        _engineBadge('ASR', 'ONNX'),
         const SizedBox(width: 4),
-        _engineBadge('LLM', 'MLX'),
+        _engineBadge('LLM', 'llama.cpp'),
       ],
     );
   }

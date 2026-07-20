@@ -1,8 +1,8 @@
 /// Model configuration & management screen.
 ///
-/// Lists the required MLX models with their on-disk status, and lets the
+/// Lists the required models with their on-disk status, and lets the
 /// user remove each model. All provisioning is local — no network is used.
-/// ASR uses SFSpeechRecognizer (built-in, no model needed); TTS is deferred.
+/// TTS is deferred.
 library;
 
 import 'dart:async';
@@ -155,7 +155,7 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  'MLX models · copy directories into app sandbox · offline',
+                  'GGUF + sherpa-onnx models · copy into app sandbox · offline',
                   style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
                 ),
               ],
@@ -248,8 +248,8 @@ class _ModelCard extends StatelessWidget {
     Color color = const Color(0xFF9E9E9E);
     if (!status.present) {
       text = 'Not installed · max ${formatBytes(status.spec.maxSizeBytes)}';
-    } else if (!status.validMlx) {
-      text = 'Invalid · not an MLX model directory';
+    } else if (!status.valid) {
+      text = 'Invalid · missing or corrupt model files';
       color = const Color(0xFFFF5252);
     } else if (status.exceedsSizeLimit) {
       text = 'Oversized · ${formatBytes(status.sizeBytes)}';

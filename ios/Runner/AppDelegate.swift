@@ -7,14 +7,17 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Register the QwenEcho engine plugin (MethodChannel + EventChannel)
-    if let controller = window?.rootViewController as? FlutterViewController {
-      EnginePlugin.register(with: controller.registrar(forPlugin: "EnginePlugin")!)
-    }
+    // EnginePlugin registration moved to didInitializeImplicitFlutterEngine
+    // because window is nil here in scene-based lifecycle.
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // Register the QwenEcho engine plugin (MethodChannel + EventChannel)
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "EnginePlugin") {
+      EnginePlugin.register(with: registrar)
+    }
   }
 }

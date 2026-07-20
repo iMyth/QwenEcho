@@ -77,6 +77,7 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
         return;
       }
       await _engine.init(
+        asrPath: paths[ModelKind.asr]!,
         llmPath: paths[ModelKind.llm]!,
       );
       setState(() => _statusText = 'Ready ($_srcLang→$_tgtLang) — tap mic');
@@ -95,8 +96,18 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
       await _engine.stop();
       setState(() => _statusText = 'Stopped — tap mic to resume');
     } else if (_engine.state == EchoEngineState.ready) {
-      await _engine.start(srcLang: _srcLang, tgtLang: _tgtLang);
-      setState(() => _statusText = 'Listening ($_srcLang→$_tgtLang)');
+      try {
+        await _engine.start(srcLang: _srcLang, tgtLang: _tgtLang);
+        if (mounted) {
+          setState(() => _statusText = 'Listening ($_srcLang→$_tgtLang)');
+        }
+      } catch (_) {
+        // EchoEngine already posted an ErrorMessage that StatusBar will
+        // render. Just revert the overlay text to something actionable.
+        if (mounted) {
+          setState(() => _statusText = 'Mic unavailable — check Settings');
+        }
+      }
     }
   }
 
@@ -270,20 +281,39 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
             right: 16,
             bottom: 16,
             child: SafeArea(
-              child: FloatingActionButton(
-                backgroundColor:
-                    _engine.state == EchoEngineState.running
-                        ? const Color(0xFFFF5252)
-                        : _engine.state == EchoEngineState.ready
-                            ? const Color(0xFF00E676)
-                            : const Color(0xFF616161),
-                onPressed: _togglePipeline,
-                child: Icon(
-                  _engine.state == EchoEngineState.running
-                      ? Icons.stop
-                      : Icons.mic,
-                  color: Colors.white,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Debug test-inject button (only visible when running).
+                  if (_engine.state == EchoEngineState.running)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FloatingActionButton.small(
+                        heroTag: 'test_inject',
+                        backgroundColor: const Color(0xFF2196F3),
+                        tooltip: 'Inject test text',
+                        onPressed: () {
+                          _engine.testInject('你好世界，这是一个语音翻译测试。');
+                        },
+                        child: const Icon(Icons.bug_report, color: Colors.white),
+                      ),
+                    ),
+                  FloatingActionButton(
+                    backgroundColor:
+                        _engine.state == EchoEngineState.running
+                            ? const Color(0xFFFF5252)
+                            : _engine.state == EchoEngineState.ready
+                                ? const Color(0xFF00E676)
+                                : const Color(0xFF616161),
+                    onPressed: _togglePipeline,
+                    child: Icon(
+                      _engine.state == EchoEngineState.running
+                          ? Icons.stop
+                          : Icons.mic,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
