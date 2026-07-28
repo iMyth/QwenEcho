@@ -14,6 +14,7 @@ import os
 /// configured as `.playAndRecord` (set by [AudioCapture] so that mic input
 /// and speaker output coexist). We add `.mixWithOthers` behavior via
 /// `.duckOthers` to avoid stepping on other audio.
+@MainActor
 final class TtsPlayer: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
 
     private let synthesizer = AVSpeechSynthesizer()
