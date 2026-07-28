@@ -1,41 +1,34 @@
 package com.example.qwen_echo.engine
 
+import android.app.Activity
 import android.content.Context
 import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 /// TTS plugin bridge for QwenEcho.
 ///
-/// Exposes MethodChannel for text-to-speech commands (speak, stop, getVoices).
-/// Uses the Android system TextToSpeech engine.
-///
-/// Mirrors iOS TtsPlayer.swift (FlutterPlugin part) — same channel name,
-/// same method names, same argument structure.
-class TtsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
+/// Implements ActivityAware to get Activity context for TTS initialization.
+/// Android's TextToSpeech requires Activity context on some devices.
+class TtsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware {
 
     private var methodChannel: MethodChannel? = null
     private val ttsPlayer = TtsPlayer()
-    private var applicationContext: Context? = null
+    private var activity: Activity? = null
 
     companion object {
         private const val TAG = "TtsPlugin"
-        private var instance: TtsPlugin? = null
     }
 
     // MARK: - FlutterPlugin
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        instance = this
-        applicationContext = binding.applicationContext
-
         methodChannel = MethodChannel(binding.binaryMessenger, "qwen_echo_tts").also {
             it.setMethodCallHandler(this)
         }
-
-        // Initialize TTS engine
-        ttsPlayer.initialize(binding.applicationContext)
         Log.d(TAG, "Attached to engine")
     }
 
@@ -43,8 +36,29 @@ class TtsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         methodChannel?.setMethodCallHandler(null)
         methodChannel = null
         ttsPlayer.shutdown()
-        instance = null
         Log.d(TAG, "Detached from engine")
+    }
+
+    // MARK: - ActivityAware
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        activity = binding.activity
+        // Initialize TTS with Activity context
+        ttsPlayer.initialize(binding.activity)
+        Log.d(TAG, "Attached to activity — TTS initialized")
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        activity = null
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        activity = binding.activity
+        ttsPlayer.initialize(binding.activity)
+    }
+
+    override fun onDetachedFromActivity() {
+        activity = null
     }
 
     // MARK: - MethodChannel.MethodCallHandler
