@@ -144,7 +144,8 @@ class EchoEngine {
   /// Updates both the Dart-side language pair (so the LLM prompt uses the
   /// new direction on the next translation) and the native ASR stage (so
   /// the language hint sent to SenseVoice is correct).
-  Future<void> setLanguage({required String srcLang, required String tgtLang}) async {
+  Future<void> setLanguage(
+      {required String srcLang, required String tgtLang}) async {
     debugPrint('[EchoEngine] setLanguage: $srcLang -> $tgtLang');
     _srcLang = srcLang;
     _tgtLang = tgtLang;
@@ -187,7 +188,8 @@ class EchoEngine {
         _messageController.add(message);
 
         // Auto-update state when engine reports ready
-        if (message is EngineReadyMessage && _state == EchoEngineState.uninitialized) {
+        if (message is EngineReadyMessage &&
+            _state == EchoEngineState.uninitialized) {
           _state = EchoEngineState.ready;
         }
 
@@ -206,7 +208,8 @@ class EchoEngine {
     final segmentId = asr.segmentId;
     final sourceText = asr.text;
 
-    debugPrint('[EchoEngine] Running translation for segment $segmentId: $sourceText');
+    debugPrint(
+        '[EchoEngine] Running translation for segment $segmentId: $sourceText');
 
     String buffer = '';
     _llmService
@@ -220,13 +223,12 @@ class EchoEngine {
       onTimeout: (sink) {
         debugPrint('[EchoEngine] Translation timed out');
         sink.close();
-        _messageController.add(ErrorMessage(
+        _messageController.add(const ErrorMessage(
           code: -6,
           detail: 'Translation timed out',
         ));
       },
-    )
-        .listen(
+    ).listen(
       (token) {
         buffer += token;
         _messageController.add(TranslationStreamMessage(
@@ -236,7 +238,8 @@ class EchoEngine {
         ));
       },
       onDone: () {
-        debugPrint('[EchoEngine] Translation done for segment $segmentId: $buffer');
+        debugPrint(
+            '[EchoEngine] Translation done for segment $segmentId: $buffer');
         _llmService.addToContext(sourceText, buffer);
         _messageController.add(TranslationDoneMessage(
           speakerId: speakerId,

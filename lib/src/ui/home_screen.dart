@@ -77,8 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool get _modelsReady =>
       _modelStatuses != null && _modelStatuses!.every((s) => s.isReady);
 
-  int get _readyCount =>
-      _modelStatuses?.where((s) => s.isReady).length ?? 0;
+  int get _readyCount => _modelStatuses?.where((s) => s.isReady).length ?? 0;
 
   int get _totalCount => _modelStatuses?.length ?? 0;
 
@@ -195,10 +194,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Simultaneous Interpretation',
           style: TextStyle(
             color: Colors.white,
@@ -206,13 +205,13 @@ class _HomeScreenState extends State<HomeScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 6),
-        const Text(
+        SizedBox(height: 6),
+        Text(
           'On-device · Air-gapped · No network',
           style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 13),
         ),
-        const SizedBox(height: 12),
-        const Text(
+        SizedBox(height: 12),
+        Text(
           'Place the phone between two speakers. The top half is flipped for '
           'the person across from you.',
           style: TextStyle(color: Color(0xFFBDBDBD), fontSize: 13),
@@ -229,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
@@ -247,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ready
                       ? 'All models ready'
                       : 'Models ready: $_readyCount / $_totalCount',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -258,7 +257,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ready
                       ? 'SenseVoice ASR + Qwen3.5 LLM loaded locally'
                       : 'Open Model Settings to import missing models',
-                  style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
+                  style:
+                      const TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
                 ),
               ],
             ),
@@ -382,7 +382,8 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF3A1515),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFF5252).withOpacity(0.4)),
+        border:
+            Border.all(color: const Color(0xFFFF5252).withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -760,7 +761,8 @@ class _ControlBar extends StatelessWidget {
           // Swap languages button — quick turn-taking for the other speaker.
           IconButton(
             tooltip: 'Swap languages',
-            icon: const Icon(Icons.swap_vert, color: Color(0xFFBDBDBD), size: 22),
+            icon:
+                const Icon(Icons.swap_vert, color: Color(0xFFBDBDBD), size: 22),
             onPressed: onSwap,
           ),
           // Mute / unmute button
@@ -785,9 +787,7 @@ class _ControlBar extends StatelessWidget {
                     color: accent,
                   ),
                 Material(
-                  color: isRunning
-                      ? const Color(0xFFFF5252)
-                      : accent,
+                  color: isRunning ? const Color(0xFFFF5252) : accent,
                   shape: const CircleBorder(),
                   elevation: 4,
                   child: InkWell(
@@ -826,7 +826,8 @@ class _ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xEE3A1515),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFF5252).withOpacity(0.5)),
+        border:
+            Border.all(color: const Color(0xFFFF5252).withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [

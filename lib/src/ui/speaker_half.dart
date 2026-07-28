@@ -112,8 +112,7 @@ class SpeakerHalfState extends State<SpeakerHalf> {
   /// space separator (typewriter effect). Otherwise starts a new line.
   void appendTranslationToken(String token) {
     setState(() {
-      if (_lines.isNotEmpty &&
-          _lines.last.color == kTranslationColor) {
+      if (_lines.isNotEmpty && _lines.last.color == kTranslationColor) {
         final existing = _lines.last;
         _lines[_lines.length - 1] = DisplayLine(
           text: '${existing.text} $token',

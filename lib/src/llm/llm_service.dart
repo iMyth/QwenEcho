@@ -85,7 +85,8 @@ class LlmService {
     final prompt = _buildPrompt(text, srcLang: srcLang, tgtLang: tgtLang);
     final params = GenerationParams(maxTokens: maxTokens, temp: temperature);
 
-    debugPrint('[LlmService] Starting translation with prompt length ${prompt.length}');
+    debugPrint(
+        '[LlmService] Starting translation with prompt length ${prompt.length}');
 
     return session
         .create(

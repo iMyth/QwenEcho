@@ -26,8 +26,7 @@ void main() {
       final transforms = find.byType(Transform);
       bool foundRotation = false;
       for (int i = 0; i < transforms.evaluate().length; i++) {
-        final transform =
-            tester.widget<Transform>(transforms.at(i));
+        final transform = tester.widget<Transform>(transforms.at(i));
         final matrix = transform.transform;
         // A 180-degree rotation matrix has cos(pi) ≈ -1 at [0][0] and [1][1].
         if ((matrix.getColumn(0)[0] - (-1.0)).abs() < 0.001 &&
@@ -59,7 +58,8 @@ void main() {
         orElse: () => const MethodCall('notfound'),
       );
       expect(orientationCall.method, 'SystemChrome.setPreferredOrientations');
-      expect(orientationCall.arguments, contains('DeviceOrientation.portraitUp'));
+      expect(
+          orientationCall.arguments, contains('DeviceOrientation.portraitUp'));
     });
 
     testWidgets('shows idle indicator when no text received', (tester) async {

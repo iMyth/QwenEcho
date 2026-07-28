@@ -158,8 +158,7 @@ class _WarningOverlayState extends State<WarningOverlay> {
                 decoration: BoxDecoration(
                   color: entry.color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: entry.color.withValues(alpha: 0.6)),
+                  border: Border.all(color: entry.color.withValues(alpha: 0.6)),
                 ),
                 child: Row(
                   children: [

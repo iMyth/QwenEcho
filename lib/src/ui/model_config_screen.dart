@@ -77,7 +77,8 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: error ? const Color(0xFFB00020) : const Color(0xFF323232),
+        backgroundColor:
+            error ? const Color(0xFFB00020) : const Color(0xFF323232),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -105,12 +106,13 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
                 children: [
                   _summaryHeader(statuses),
                   const SizedBox(height: 8),
-                  for (final status in statuses) _ModelCard(
-                    status: status,
-                    accent: _accent,
-                    onDelete: () => _delete(status.spec),
-                    onRefresh: _refresh,
-                  ),
+                  for (final status in statuses)
+                    _ModelCard(
+                      status: status,
+                      accent: _accent,
+                      onDelete: () => _delete(status.spec),
+                      onRefresh: _refresh,
+                    ),
                 ],
               ),
             ),

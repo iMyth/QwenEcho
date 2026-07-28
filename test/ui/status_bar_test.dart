@@ -80,8 +80,8 @@ void main() {
       ));
 
       // Send a non-thermal message.
-      controller.add(const AsrPartialMessage(
-          speakerId: 0, text: 'hello', segmentId: 0));
+      controller.add(
+          const AsrPartialMessage(speakerId: 0, text: 'hello', segmentId: 0));
       await tester.pump();
 
       // Still Normal.
