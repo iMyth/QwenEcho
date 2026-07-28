@@ -3,6 +3,7 @@ package com.example.qwen_echo.engine
 import android.app.Activity
 import android.content.Context
 import android.util.Log
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -27,6 +28,11 @@ class EnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
     private var pipeline: PipelineController? = null
     private var activity: Activity? = null
     private var applicationContext: Context? = null
+
+    // Pending start parameters — used when permission is requested but not yet granted
+    private var pendingStartResult: MethodChannel.Result? = null
+    private var pendingSrcLang: String = "zh"
+    private var pendingTgtLang: String = "en"
 
     // Keep plugin alive
     companion object {
@@ -69,6 +75,21 @@ class EnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
             if (requestCode == AudioCapture.REQUEST_RECORD_AUDIO) {
                 val granted = grantResults.isNotEmpty() && grantResults.all { it == android.content.pm.PackageManager.PERMISSION_GRANTED }
                 pipeline?.getAudioCapture()?.onPermissionResult(granted)
+
+                // Auto-start if we were waiting for permission
+                if (granted && pendingStartResult != null) {
+                    Log.d(TAG, "Permission granted — auto-starting pipeline")
+                    val error = pipeline?.start(pendingSrcLang, pendingTgtLang)
+                    if (error != null) {
+                        pendingStartResult?.error("start_failed", error, null)
+                    } else {
+                        pendingStartResult?.success(mapOf("success" to true))
+                    }
+                    pendingStartResult = null
+                } else if (!granted && pendingStartResult != null) {
+                    pendingStartResult?.error("start_failed", "Microphone permission denied", null)
+                    pendingStartResult = null
+                }
                 return@addRequestPermissionsResultListener true
             }
             false
@@ -149,18 +170,26 @@ class EnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
         val srcLang = args?.get("srcLang") as? String ?: "zh"
         val tgtLang = args?.get("tgtLang") as? String ?: "en"
 
-        // Request microphone permission if needed
+        // Check microphone permission before starting
         val act = activity
         if (act != null) {
-            val permResult = pipeline?.getAudioCapture()?.requestPermission(act)
-            if (permResult is AudioPermissionResult.Denied) {
-                // Permission dialog shown — result will come via
-                // onRequestPermissionsResult. For now, return a provisional
-                // success; the actual start happens after permission is granted.
+            val hasPermission = ContextCompat.checkSelfPermission(
+                act, android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if (!hasPermission) {
+                // Request permission and store pending start params
+                // The permission result listener will auto-start when granted
                 Log.d(TAG, "Requesting microphone permission...")
+                pendingStartResult = result
+                pendingSrcLang = srcLang
+                pendingTgtLang = tgtLang
+                pipeline?.getAudioCapture()?.requestPermission(act)
+                return // Don't call result yet — wait for permission
             }
         }
 
+        // Permission already granted — start immediately
         val error = pipeline?.start(srcLang, tgtLang)
         if (error != null) {
             result.error("start_failed", error, null)

@@ -6,16 +6,13 @@ import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineSenseVoiceModelConfig
 import com.k2fsa.sherpa.onnx.FeatureConfig
+import com.k2fsa.sherpa.onnx.getOfflineModelConfig
 import java.io.File
 
 /// ASR stage using sherpa-onnx offline recognizer with SenseVoice-Small.
 ///
 /// Takes locked audio segments from the VAD, transcribes them with a
 /// sherpa-onnx offline recognizer, and posts the result through MessageStream.
-///
-/// SenseVoice-Small is an offline (non-streaming) model that processes
-/// the entire audio segment at once. It supports auto language detection
-/// across zh, en, ja, yue, ko.
 class AsrStage(
     private val messages: MessageStream,
 ) {
@@ -39,16 +36,31 @@ class AsrStage(
             throw IllegalArgumentException("ASR package is missing tokens.txt at: ${tokensFile.absolutePath}")
         }
 
+        // Use the factory function for SenseVoice (type 15) to ensure
+        // JNI-compatible config structure.
+        val modelConfig = getOfflineModelConfig(15) ?: OfflineModelConfig(
+            senseVoice = OfflineSenseVoiceModelConfig(
+                model = modelFile.absolutePath,
+                language = language,
+                useInverseTextNormalization = true,
+            ),
+            numThreads = 2,
+            tokens = tokensFile.absolutePath,
+        )
+
+        // Override paths to use our actual model files
         val senseVoiceConfig = OfflineSenseVoiceModelConfig(
             model = modelFile.absolutePath,
             language = language,
             useInverseTextNormalization = true,
         )
 
-        val modelConfig = OfflineModelConfig(
+        val finalModelConfig = OfflineModelConfig(
             senseVoice = senseVoiceConfig,
             numThreads = 2,
             tokens = tokensFile.absolutePath,
+            debug = false,
+            provider = "cpu",
         )
 
         val featConfig = FeatureConfig(
@@ -58,8 +70,9 @@ class AsrStage(
 
         val config = OfflineRecognizerConfig(
             featConfig = featConfig,
-            modelConfig = modelConfig,
+            modelConfig = finalModelConfig,
             decodingMethod = "greedy_search",
+            maxActivePaths = 4,
         )
 
         recognizer = OfflineRecognizer(config = config)
@@ -67,15 +80,12 @@ class AsrStage(
     }
 
     /// Set the source language for recognition.
-    /// SenseVoice supports: "auto", "zh", "en", "ja", "yue", "ko".
-    /// "auto" enables automatic language detection.
     fun setLanguage(lang: String) {
         language = lang
         Log.d(TAG, "Set language: $lang")
     }
 
     /// Recognize speech from a locked audio segment.
-    /// Returns the transcribed text, or empty string on failure.
     fun recognize(segment: LockedSegment): String {
         val rec = recognizer
         if (rec == null) {
@@ -92,14 +102,12 @@ class AsrStage(
             return ""
         }
 
-        // Offline recognizer processes the entire audio at once
         val stream = rec.createStream()
         stream.acceptWaveform(samples, 16000)
         rec.decode(stream)
         val result = rec.getResult(stream)
         val text = result.text.trim()
 
-        // Post result for UI consumption
         if (text.isNotEmpty()) {
             val detectedLang = if (result.lang.isNotEmpty()) result.lang else language
             Log.d(TAG, "Recognized ($detectedLang): $text")
@@ -113,7 +121,6 @@ class AsrStage(
         return text
     }
 
-    /// Release recognizer resources.
     fun release() {
         recognizer?.release()
         recognizer = null
