@@ -105,11 +105,36 @@ Android is **not yet implemented** — only the iOS Swift engine exists.
 
 ## Building
 
+### Model Setup
+
+Models are **not included in the repository** (too large, ~750MB total). Run the
+setup script to download them before building:
+
+```bash
+bash scripts/setup_models.sh
+```
+
+This downloads:
+| Model | Size | Source |
+|-------|------|--------|
+| SenseVoice-Small ONNX (ASR) | 228 MB | [HuggingFace](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17) (public) |
+| Qwen3.5-0.8B-Q4_K_M GGUF (LLM) | 508 MB | [GitHub Releases](https://github.com/iMyth/QwenEcho/releases/latest) (this repo) |
+
+**Qwen3.5 GGUF not yet on GitHub Releases?** The script will fail with a
+download error. In that case, download manually:
+
+1. Go to [Qwen3.5-0.8B-GGUF on HuggingFace](https://huggingface.co/Qwen/Qwen3.5-0.8B-GGUF) (requires HF login)
+2. Download `Qwen3.5-0.8B-Q4_K_M.gguf`
+3. Place it in `models/Qwen3.5-0.8B-Q4_K_M.gguf`
+4. Re-run `bash scripts/setup_models.sh` to verify
+
+After setup, the app runs **fully offline** — no network required at runtime.
+
 ### Prerequisites
 
-Models must be provisioned locally into the app sandbox. QwenEcho does NOT download anything from the network. Two ways to get models in:
+Models must be provisioned locally into the app sandbox. Two ways to get models in:
 
-1. **Bundle in Flutter assets** — drop model files under `assets/models/` in the project; `ModelRepository` resolves them automatically at runtime.
+1. **Setup script** (recommended) — `bash scripts/setup_models.sh` downloads and verifies both models.
 2. **Import via Files app** — place model files in the app's Files container; `ModelConfigScreen` validates and adopts them.
 
 Required assets:
@@ -217,6 +242,34 @@ For simulator testing without a microphone, use `engine.testInject('你好世界
 - **C++ native engine** — unify ASR/LLM/TTS under a single cross-platform C++ core with a lock-free SPSC ring buffer (the architecture originally described)
 - **Bluetooth audio routing** — per-device output so each speaker hears through their own earbud
 - **Conversation memory** — longer sliding context and optional session summary
+
+## Maintainer Notes
+
+### Uploading Qwen3.5 GGUF to GitHub Releases
+
+The Qwen3.5-0.8B-Q4_K_M.gguf model (508MB) must be uploaded to GitHub Releases
+for `scripts/setup_models.sh` to work for other developers.
+
+**One-time setup:**
+
+```bash
+# 1. Create a new release (or use existing tag)
+gh release create v0.1.0 --title "v0.1.0" --notes "Initial release"
+
+# 2. Upload the GGUF file
+gh release upload v0.1.0 models/Qwen3.5-0.8B-Q4_K_M.gguf
+```
+
+**Updating the model:**
+
+```bash
+# Delete old asset, then re-upload
+gh release delete-asset v0.1.0 Qwen3.5-0.8B-Q4_K_M.gguf --yes
+gh release upload v0.1.0 models/Qwen3.5-0.8B-Q4_K_M.gguf
+```
+
+After uploading, update `QWEN_GGUF_MD5` in `scripts/setup_models.sh` if the
+file checksum changed.
 
 ## License
 
