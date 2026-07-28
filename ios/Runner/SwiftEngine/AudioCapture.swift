@@ -49,9 +49,19 @@ final class AudioCapture {
     func requestPermission() async -> AudioPermissionResult {
         let session = AVAudioSession.sharedInstance()
         do {
-            // `.record` is sufficient for ASR-only operation. Switch to
-            // `.playAndRecord` once TTS output (Phase 5) is wired up.
-            try session.setCategory(.record, mode: .default, options: [])
+            // `.playAndRecord` so the audio session supports BOTH microphone
+            // capture (ASR) AND speaker output (TTS). Without this, TTS
+            // playback would either fail or force the session back to
+            // `.playback`, breaking the mic tap on the next ASR segment.
+            //
+            // `.defaultToSpeaker` routes TTS output through the loudspeaker
+            // (not the earpiece) so the person across the table can hear it.
+            // `.allowBluetooth` keeps hands-free accessories working.
+            try session.setCategory(
+                .playAndRecord,
+                mode: .default,
+                options: [.defaultToSpeaker, .allowBluetooth]
+            )
             try session.setActive(true, options: [])
         } catch {
             os_log("[AudioCapture] Audio session setup failed: %{public}@",

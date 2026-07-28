@@ -19,5 +19,10 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "EnginePlugin") {
       EnginePlugin.register(with: registrar)
     }
+
+    // Register the TTS player plugin (separate MethodChannel for speak/stop).
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "TtsPlayer") {
+      TtsPlayer.register(with: registrar)
+    }
   }
 }

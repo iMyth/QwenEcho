@@ -49,6 +49,14 @@ sealed class EchoMessage {
       7 => EngineReadyMessage(
           status: map['text'] as String? ?? '',
         ),
+      8 => TtsStartedMessage(
+          speakerId: map['speakerId'] as int? ?? 0,
+          segmentId: map['segmentId'] as int? ?? 0,
+        ),
+      9 => TtsCompleteMessage(
+          speakerId: map['speakerId'] as int? ?? 0,
+          segmentId: map['segmentId'] as int? ?? 0,
+        ),
       _ => null,
     };
   }
@@ -163,4 +171,34 @@ class EngineReadyMessage extends EchoMessage {
 
   @override
   String toString() => 'EngineReadyMessage(status="$status")';
+}
+
+/// TTS playback has started for a translated segment.
+class TtsStartedMessage extends EchoMessage {
+  final int speakerId;
+  final int segmentId;
+
+  const TtsStartedMessage({
+    required this.speakerId,
+    required this.segmentId,
+  });
+
+  @override
+  String toString() =>
+      'TtsStartedMessage(speaker=$speakerId, seg=$segmentId)';
+}
+
+/// TTS playback completed for a translated segment.
+class TtsCompleteMessage extends EchoMessage {
+  final int speakerId;
+  final int segmentId;
+
+  const TtsCompleteMessage({
+    required this.speakerId,
+    required this.segmentId,
+  });
+
+  @override
+  String toString() =>
+      'TtsCompleteMessage(speaker=$speakerId, seg=$segmentId)';
 }
