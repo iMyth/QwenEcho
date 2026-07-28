@@ -62,3 +62,41 @@ jobs:
       # Models are NOT needed for build verification — only for runtime.
       - name: Build iOS (no codesign)
         run: flutter build ios --no-codesign --no-pub
+
+  build-apk:
+    name: Android Build (APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Only run on PRs to avoid burning minutes on every push
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      # The sherpa-onnx AAR is auto-downloaded by the Gradle task.
+      # Models are NOT needed for build verification — only for runtime.
+      - name: Build APK (debug)
+        run: flutter build apk --debug --no-pub
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-echo-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7

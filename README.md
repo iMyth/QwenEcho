@@ -49,6 +49,18 @@ QwenEcho/
 │   ├── EnginePlugin.swift          # MethodChannel/EventChannel bridge
 │   ├── MessageStream.swift         # Event sink dispatcher
 │   └── EchoMessage.swift           # Native message type definitions
+├── android/app/src/main/kotlin/    # Android Native Engine (Kotlin)
+│   └── com/example/qwen_echo/engine/
+│       ├── AudioCapture.kt         # AudioRecord mic tap (16kHz Int16 directly)
+│       ├── VoiceActivityDetector.kt # Energy-based VAD + segment locking
+│       ├── AsrStage.kt             # sherpa-onnx OfflineRecognizer wrapper
+│       ├── PipelineController.kt   # Audio → VAD → ASR orchestration
+│       ├── ThermalMonitor.kt       # PowerManager thermal state monitoring
+│       ├── TtsPlayer.kt            # Android TextToSpeech wrapper
+│       ├── EnginePlugin.kt         # MethodChannel/EventChannel bridge
+│       ├── TtsPlugin.kt            # TTS MethodChannel bridge
+│       ├── MessageStream.kt        # Event sink dispatcher
+│       └── EchoMessage.kt          # Native message type definitions
 ├── test/                           # Flutter widget tests
 ├── pubspec.yaml
 └── README.md
@@ -96,12 +108,18 @@ QwenEcho/
 
 ## Requirements
 
-- **iOS**: 16+, arm64, 4GB+ RAM recommended
-- **Models**: ~750 MB total disk space for ASR package + LLM GGUF
-- **Build**: Xcode 15+, Flutter 3.16+, Swift 5.9+
-- **Simulator**: Enable Mac mic passthrough via Simulator menu → Features → Audio Input → `<your Mac's mic>`
+| | iOS | Android |
+|---|---|---|
+| **OS** | 16+ | API 24+ (Android 7.0) |
+| **Arch** | arm64 | arm64-v8a |
+| **RAM** | 4GB+ recommended | 4GB+ recommended |
+| **Build** | Xcode 15+, Flutter 3.16+, Swift 5.9+ | Android Studio, JDK 17, Flutter 3.16+ |
 
-Android is **not yet implemented** — only the iOS Swift engine exists.
+- **Models**: ~750 MB total disk space for ASR package + LLM GGUF
+- **iOS Simulator**: Enable Mac mic passthrough via Simulator menu → Features → Audio Input → `<your Mac's mic>`
+- **Android Emulator**: Enable microphone passthrough via Extended controls → Microphone
+
+Both iOS and Android are supported. The Kotlin engine mirrors the iOS Swift pipeline.
 
 ## Building
 
@@ -150,12 +168,31 @@ merged — so no separate `prepare.sh` step is needed. The Swift API wrapper
 (`ios/Runner/SwiftEngine/SherpaOnnx.swift`) is vendored directly in the
 Runner target.
 
+#### Android native dependencies
+
+ASR uses the [sherpa-onnx Android AAR](https://huggingface.co/csukuangfj/sherpa-onnx-libs)
+(~50MB). It is auto-downloaded by a Gradle task on first build, or you can
+download it manually:
+
+```bash
+# Auto-downloaded by Gradle, or download manually:
+mkdir -p android/app/libs
+curl -L "https://huggingface.co/csukuangfj/sherpa-onnx-libs/resolve/main/android/sherpa-onnx-v1.10.45.aar" \
+  -o android/app/libs/sherpa-onnx.aar
+```
+
+The Kotlin engine (`android/app/src/main/kotlin/.../engine/`) mirrors the iOS
+Swift pipeline: `AudioRecord` → `VoiceActivityDetector` → `AsrStage`
+(sherpa-onnx `OfflineRecognizer` with SenseVoice) → `TtsPlayer` (Android
+system `TextToSpeech`).
+
 ### Build & Run
 
 ```bash
 flutter pub get
-flutter run                # picks a connected device / simulator
-flutter build ios --release
+flutter run                # picks a connected device / simulator / emulator
+flutter build ios --release   # iOS
+flutter build apk --release   # Android
 ```
 
 ### First Launch
@@ -237,7 +274,7 @@ For simulator testing without a microphone, use `engine.testInject('你好世界
 
 ## Roadmap
 
-- **Android engine** — mirror the Swift pipeline in Kotlin/JNI with NNAPI + AAudio
+- **~~Android engine~~** — ✅ Done. Kotlin pipeline mirrors the Swift engine (AudioRecord → VAD → sherpa-onnx → TTS).
 - **Qwen3-TTS-Streaming** — replace system voices with the ~250MB streaming TTS model for higher-quality output
 - **C++ native engine** — unify ASR/LLM/TTS under a single cross-platform C++ core with a lock-free SPSC ring buffer (the architecture originally described)
 - **Bluetooth audio routing** — per-device output so each speaker hears through their own earbud

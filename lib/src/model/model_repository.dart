@@ -200,10 +200,19 @@ class ModelRepository {
   // ---------------------------------------------------------------------------
 
   /// Filesystem path to the Flutter assets directory inside the app bundle.
+  ///
+  /// On iOS/macOS, assets are in `Frameworks/App.framework/flutter_assets`.
+  /// On Android, assets are inside the APK and not directly accessible as files.
+  /// For development, models should be downloaded via `scripts/setup_models.sh`
+  /// or imported via the Files app.
   String? get _flutterAssetsDir {
-    if (!Platform.isIOS && !Platform.isMacOS) return null;
-    final bundleDir = File(Platform.executable).parent;
-    return '${bundleDir.path}/Frameworks/App.framework/flutter_assets';
+    if (Platform.isIOS || Platform.isMacOS) {
+      final bundleDir = File(Platform.executable).parent;
+      return '${bundleDir.path}/Frameworks/App.framework/flutter_assets';
+    }
+    // Android: assets are in APK, not accessible as regular files.
+    // Models must be downloaded or imported to the sandbox directory.
+    return null;
   }
 
   /// Path to a model bundled in Flutter assets, or null if not applicable.
