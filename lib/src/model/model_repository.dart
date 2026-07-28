@@ -82,80 +82,33 @@ class ModelRepository {
 
   /// Compute the status of a single model.
   ///
-  /// Checks the user-imported sandbox copy. Validation depends on [ModelKind]:
-  /// - LLM: a file whose first four bytes are the GGUF magic (`GGUF`).
-  /// - ASR: a directory containing `model.int8.onnx` and `tokens.txt`.
+  /// Checks in order:
+  /// 1. App sandbox (`modelsDir()`)
+  /// 2. External storage `/sdcard/QwenEcho/models/` (Android, for easy adb push)
+  /// 3. Bundled Flutter assets (iOS/macOS only)
   Future<ModelStatus> statusFor(ModelSpec spec) async {
     final modelPath = await pathFor(spec);
 
-    // LLM is a single GGUF file.
-    if (spec.kind == ModelKind.llm) {
-      final file = File(modelPath);
-      if (await file.exists()) {
-        final size = await file.length();
-        final valid = await _isValidGguf(file);
-        return ModelStatus(
-          spec: spec,
-          path: modelPath,
-          present: true,
-          sizeBytes: size,
-          valid: valid,
-        );
-      }
+    // Check app sandbox first
+    final sandboxStatus = await _checkModel(spec, modelPath);
+    if (sandboxStatus != null) return sandboxStatus;
 
-      final bundledPath = _bundledPathFor(spec);
-      if (bundledPath != null) {
-        final bundledFile = File(bundledPath);
-        if (await bundledFile.exists()) {
-          final size = await bundledFile.length();
-          final valid = await _isValidGguf(bundledFile);
-          return ModelStatus(
-            spec: spec,
-            path: bundledPath,
-            present: true,
-            sizeBytes: size,
-            valid: valid,
-          );
-        }
+    // On Android, also check app-specific external storage (no permission needed)
+    // Path: /sdcard/Android/data/com.example.qwen_echo/files/models/
+    if (Platform.isAndroid) {
+      final extBase = await getExternalStorageDirectory();
+      if (extBase != null) {
+        final externalPath = '${extBase.path}/models/${spec.dirName}';
+        final externalStatus = await _checkModel(spec, externalPath);
+        if (externalStatus != null) return externalStatus;
       }
-
-      return ModelStatus(
-        spec: spec,
-        path: modelPath,
-        present: false,
-        sizeBytes: 0,
-        valid: false,
-      );
     }
 
-    // ASR is a sherpa-onnx model package directory.
-    final modelDir = Directory(modelPath);
-    if (await modelDir.exists()) {
-      final size = await _directorySize(modelDir);
-      final valid = await _hasSherpaOnnxPackage(modelDir);
-      return ModelStatus(
-        spec: spec,
-        path: modelPath,
-        present: true,
-        sizeBytes: size,
-        valid: valid,
-      );
-    }
-
+    // Check bundled assets (iOS/macOS only)
     final bundledPath = _bundledPathFor(spec);
     if (bundledPath != null) {
-      final bundledDir = Directory(bundledPath);
-      if (await bundledDir.exists()) {
-        final size = await _directorySize(bundledDir);
-        final valid = await _hasSherpaOnnxPackage(bundledDir);
-        return ModelStatus(
-          spec: spec,
-          path: bundledPath,
-          present: true,
-          sizeBytes: size,
-          valid: valid,
-        );
-      }
+      final bundledStatus = await _checkModel(spec, bundledPath);
+      if (bundledStatus != null) return bundledStatus;
     }
 
     return ModelStatus(
@@ -165,6 +118,32 @@ class ModelRepository {
       sizeBytes: 0,
       valid: false,
     );
+  }
+
+  /// Check a single model path. Returns null if not present.
+  Future<ModelStatus?> _checkModel(ModelSpec spec, String path) async {
+    if (spec.kind == ModelKind.llm) {
+      final file = File(path);
+      if (await file.exists()) {
+        final size = await file.length();
+        final valid = await _isValidGguf(file);
+        return ModelStatus(
+          spec: spec, path: path, present: true,
+          sizeBytes: size, valid: valid,
+        );
+      }
+    } else {
+      final dir = Directory(path);
+      if (await dir.exists()) {
+        final size = await _directorySize(dir);
+        final valid = await _hasSherpaOnnxPackage(dir);
+        return ModelStatus(
+          spec: spec, path: path, present: true,
+          sizeBytes: size, valid: valid,
+        );
+      }
+    }
+    return null;
   }
 
   /// Compute the status of all required models, in catalog order.
