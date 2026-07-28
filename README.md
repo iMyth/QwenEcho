@@ -171,13 +171,13 @@ Runner target.
 #### Android native dependencies
 
 ASR uses the [sherpa-onnx Android AAR](https://huggingface.co/csukuangfj/sherpa-onnx-libs)
-(~50MB). It is auto-downloaded by a Gradle task on first build, or you can
+(~37MB). It is auto-downloaded by a Gradle task on first build, or you can
 download it manually:
 
 ```bash
 # Auto-downloaded by Gradle, or download manually:
 mkdir -p android/app/libs
-curl -L "https://huggingface.co/csukuangfj/sherpa-onnx-libs/resolve/main/android/sherpa-onnx-v1.10.45.aar" \
+curl -L "https://huggingface.co/csukuangfj/sherpa-onnx-libs/resolve/main/android/aar/sherpa-onnx-1.12.21.aar" \
   -o android/app/libs/sherpa-onnx.aar
 ```
 
@@ -203,6 +203,49 @@ flutter build apk --release   # Android
 4. Tap **Start Interpreting** → app asks for microphone permission → split view appears.
 5. The pipeline starts automatically. Speak into the mic; your speech transcribes in your half (bottom, normal orientation) and the translation appears + is spoken aloud in the opposing half (top, rotated 180°).
 6. Use the central mic button to pause/resume. Use the speaker icon to mute TTS output.
+
+### Android Setup Notes
+
+#### Pushing models to device
+
+Models (~750MB) are not bundled in the APK. On Android, push them via `adb` to
+the app's external storage directory (no root required):
+
+```bash
+# Create directory structure
+adb shell mkdir -p /sdcard/Android/data/com.example.qwen_echo/files/models/SenseVoiceSmall-onnx
+
+# Push ASR model
+adb push models/SenseVoiceSmall-onnx/model.int8.onnx \
+  /sdcard/Android/data/com.example.qwen_echo/files/models/SenseVoiceSmall-onnx/
+adb push models/SenseVoiceSmall-onnx/tokens.txt \
+  /sdcard/Android/data/com.example.qwen_echo/files/models/SenseVoiceSmall-onnx/
+
+# Push LLM model
+adb push models/Qwen3.5-0.8B-Q4_K_M.gguf \
+  /sdcard/Android/data/com.example.qwen_echo/files/models/
+```
+
+The app checks this path on startup and should show **Models ready: 2/2**.
+
+> **Note:** Reinstalling the APK may clear this directory. Re-push if models
+> disappear after an update.
+
+#### TTS (Text-to-Speech)
+
+Android uses the system `TextToSpeech` engine. You must:
+
+1. Go to **Settings → Accessibility → Text-to-speech output**
+2. Select **Google** as the preferred engine
+3. Download voice data for your languages (Chinese, English, etc.)
+
+If TTS is not configured, the app will show "No TTS voice for language" when
+trying to speak translations.
+
+#### Microphone permission
+
+The app requests microphone permission on first start. If denied, go to
+**Settings → Apps → Qwen Echo → Permissions → Microphone** and allow it.
 
 ## UI Walkthrough
 
