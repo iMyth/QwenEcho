@@ -25,6 +25,7 @@
 		AA002008 /* AsrStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA001008 /* AsrStage.swift */; };
 		AA002009 /* ThermalMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA001009 /* ThermalMonitor.swift */; };
 		AA00200A /* TtsPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00100A /* TtsPlayer.swift */; };
+		AA00200B /* SherpaOnnx.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00100B /* SherpaOnnx.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,6 +78,7 @@
 		AA001008 /* AsrStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsrStage.swift; sourceTree = "<group>"; };
 		AA001009 /* ThermalMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThermalMonitor.swift; sourceTree = "<group>"; };
 		AA00100A /* TtsPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TtsPlayer.swift; sourceTree = "<group>"; };
+		AA00100B /* SherpaOnnx.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SherpaOnnx.swift; sourceTree = "<group>"; };
 		D380574F30681D701CE3F57D /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		DD9E2D3171D64FE132F48585 /* libPods-Runner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Runner.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E72E8227BF7284B8D049DF62 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
@@ -182,6 +184,7 @@
 				AA00100A /* TtsPlayer.swift */,
 				AA001008 /* AsrStage.swift */,
 				AA001009 /* ThermalMonitor.swift */,
+				AA00100B /* SherpaOnnx.swift */,
 			);
 			path = SwiftEngine;
 			sourceTree = "<group>";
@@ -225,7 +228,7 @@
 			);
 			name = Runner;
 			packageProductDependencies = (
-				BB000002 /* SherpaOnnx */,
+				CC000002 /* CSherpaOnnx */,
 			);
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
@@ -261,7 +264,7 @@
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
 			packageReferences = (
-				BB000001 /* XCLocalSwiftPackageReference "sherpa_onnx_local" */,
+				CC000001 /* XCRemoteSwiftPackageReference "sherpa-onnx-spm" */,
 			);
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
 			projectDirPath = "";
@@ -392,6 +395,7 @@
 				AA00200A /* TtsPlayer.swift in Sources */,
 				AA002008 /* AsrStage.swift in Sources */,
 				AA002009 /* ThermalMonitor.swift in Sources */,
+				AA00200B /* SherpaOnnx.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -734,18 +738,22 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		BB000001 /* XCLocalSwiftPackageReference "sherpa_onnx_local" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = sherpa_onnx_local;
+/* Begin XCRemoteSwiftPackageReference section */
+		CC000001 /* XCRemoteSwiftPackageReference "sherpa-onnx-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/genericgroup/sherpa-onnx-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.5;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		BB000002 /* SherpaOnnx */ = {
+		CC000002 /* CSherpaOnnx */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB000001 /* XCLocalSwiftPackageReference "sherpa_onnx_local" */;
-			productName = SherpaOnnx;
+			package = CC000001 /* XCRemoteSwiftPackageReference "sherpa-onnx-spm" */;
+			productName = CSherpaOnnx;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

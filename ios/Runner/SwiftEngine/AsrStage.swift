@@ -1,7 +1,6 @@
 import Foundation
 import AVFoundation
 import os
-import SherpaOnnx
 
 /// ASR stage using sherpa-onnx offline recognizer with SenseVoice-Small.
 ///
