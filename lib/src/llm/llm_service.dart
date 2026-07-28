@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 
 import 'package:llamadart/llamadart.dart';
+import 'package:flutter/foundation.dart';
 
 /// Exception thrown when the LLM service fails to load or generate.
 class LlmServiceException implements Exception {
@@ -36,7 +37,7 @@ class LlmService {
   /// Must be called before [translate]. Safe to call multiple times only
   /// after [dispose].
   Future<void> load(String path) async {
-    print('[LlmService] Loading model from $path');
+    debugPrint('[LlmService] Loading model from $path');
     await dispose();
 
     final engine = LlamaEngine(LlamaBackend());
@@ -54,10 +55,10 @@ class LlmService {
       );
       _engine = engine;
       _session = ChatSession(engine);
-      print('[LlmService] Model loaded successfully');
+      debugPrint('[LlmService] Model loaded successfully');
     } catch (e, st) {
-      print('[LlmService] Failed to load model: $e');
-      print('[LlmService] $st');
+      debugPrint('[LlmService] Failed to load model: $e');
+      debugPrint('[LlmService] $st');
       await engine.dispose();
       throw LlmServiceException('Failed to load model at $path: $e');
     }
@@ -84,7 +85,7 @@ class LlmService {
     final prompt = _buildPrompt(text, srcLang: srcLang, tgtLang: tgtLang);
     final params = GenerationParams(maxTokens: maxTokens, temp: temperature);
 
-    print('[LlmService] Starting translation with prompt length ${prompt.length}');
+    debugPrint('[LlmService] Starting translation with prompt length ${prompt.length}');
 
     return session
         .create(
@@ -98,15 +99,15 @@ class LlmService {
           enableThinking: false,
         )
         .handleError((Object error, StackTrace stackTrace) {
-          print('[LlmService] Translation stream error: $error');
-          print('[LlmService] $stackTrace');
+          debugPrint('[LlmService] Translation stream error: $error');
+          debugPrint('[LlmService] $stackTrace');
           throw LlmServiceException('Translation failed: $error');
         })
         .map((chunk) {
-          print('[LlmService] Raw chunk: $chunk');
+          debugPrint('[LlmService] Raw chunk: $chunk');
           final content = chunk.choices.first.delta.content;
           if (content != null && content.isNotEmpty) {
-            print('[LlmService] Token: $content');
+            debugPrint('[LlmService] Token: $content');
           }
           return content;
         })

@@ -50,6 +50,17 @@ final class PipelineController {
         }
     }
 
+    /// Swap the source and target languages during an active session.
+    ///
+    /// Updates the ASR language hint and stores the new pair so that
+    /// subsequent ASR segments are tagged correctly.
+    func setLanguage(srcLang: String, tgtLang: String) {
+        self.srcLang = srcLang
+        self.tgtLang = tgtLang
+        asrStage.setLanguage(srcLang)
+        os_log("[Pipeline] Language swapped: %{public}@ -> %{public}@", srcLang, tgtLang)
+    }
+
     /// Start the interpretation pipeline.
     ///
     /// Requests microphone permission (if not yet granted) before starting

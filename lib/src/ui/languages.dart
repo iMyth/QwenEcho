@@ -26,8 +26,13 @@ class SupportedLanguage {
     required this.flag,
   });
 
-  /// Combined label for the picker: "🇺🇸 English (en)".
-  String get pickerLabel => '$flag $englishName — $nativeName';
+  /// Combined label for the picker: `[CN] Chinese — 中文`.
+  ///
+  /// Flag emoji are NOT used: they render as tofu on devices whose system
+  /// emoji font lacks the Regional Indicator Symbols (some iOS simulators,
+  /// certain Chinese-region devices). The `[CODE]` prefix is a compact,
+  /// guaranteed-render substitute.
+  String get pickerLabel => '[$code] $englishName — $nativeName';
 }
 
 /// Languages supported by the on-device interpretation pipeline.

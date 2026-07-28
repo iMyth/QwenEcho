@@ -119,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _engineInitializing = false;
       });
     } catch (e) {
-      print('[HomeScreen] engine init failed: $e');
+      debugPrint('[HomeScreen] engine init failed: $e');
       await engine.dispose();
       if (!mounted) return;
       setState(() {
@@ -516,9 +516,15 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
   /// displayed but not spoken aloud.
   bool _ttsMuted = false;
 
+  /// Mutable copies of the language pair so swap updates the UI immediately.
+  late SupportedLanguage _srcLang;
+  late SupportedLanguage _tgtLang;
+
   @override
   void initState() {
     super.initState();
+    _srcLang = widget.srcLang;
+    _tgtLang = widget.tgtLang;
     _messageSubscription = widget.engine.messages.listen(_onEngineMessage);
     // Auto-start the pipeline when entering the interpretation screen so the
     // user doesn't have to tap a button immediately after a loading screen.
@@ -555,7 +561,7 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
         // speaker can hear it. The streaming tokens already rendered the
         // text on screen; TTS is the audible mirror for face-to-face use.
         if (!_ttsMuted && message.text.isNotEmpty) {
-          _ttsService.speak(message.text, lang: widget.tgtLang.code);
+          _ttsService.speak(message.text, lang: _tgtLang.code);
         }
         break;
 
@@ -577,6 +583,23 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
     _ttsService.enabled = !_ttsMuted;
   }
 
+  /// Swap source and target languages during an active session.
+  ///
+  /// Updates both the local state (so the UI label reflects the new pair)
+  /// and the engine (so the ASR language hint and LLM prompt direction
+  /// are updated for the next segment).
+  Future<void> _swapLanguages() async {
+    final tmp = _srcLang;
+    setState(() {
+      _srcLang = _tgtLang;
+      _tgtLang = tmp;
+    });
+    await widget.engine.setLanguage(
+      srcLang: _srcLang.code,
+      tgtLang: _tgtLang.code,
+    );
+  }
+
   Future<void> _startPipeline() async {
     if (_isStarting || _isRunning) return;
     setState(() {
@@ -585,8 +608,8 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
     });
     try {
       await widget.engine.start(
-        srcLang: widget.srcLang.code,
-        tgtLang: widget.tgtLang.code,
+        srcLang: _srcLang.code,
+        tgtLang: _tgtLang.code,
       );
       if (!mounted) return;
       setState(() {
@@ -608,7 +631,7 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
     try {
       await widget.engine.stop();
     } catch (e) {
-      print('[InterpretationScreen] stop failed: $e');
+      debugPrint('[InterpretationScreen] stop failed: $e');
     }
     if (!mounted) return;
     setState(() {
@@ -648,13 +671,14 @@ class _InterpretationScreenState extends State<InterpretationScreen> {
             right: 0,
             bottom: 0,
             child: _ControlBar(
-              srcLang: widget.srcLang,
-              tgtLang: widget.tgtLang,
+              srcLang: _srcLang,
+              tgtLang: _tgtLang,
               isRunning: _isRunning,
               isStarting: _isStarting,
               ttsMuted: _ttsMuted,
               onToggle: _togglePipeline,
               onToggleMute: _toggleTtsMute,
+              onSwap: _swapLanguages,
               onExit: () => Navigator.pop(context),
             ),
           ),
@@ -685,6 +709,7 @@ class _ControlBar extends StatelessWidget {
   final bool ttsMuted;
   final VoidCallback onToggle;
   final VoidCallback onToggleMute;
+  final VoidCallback onSwap;
   final VoidCallback onExit;
 
   const _ControlBar({
@@ -695,6 +720,7 @@ class _ControlBar extends StatelessWidget {
     required this.ttsMuted,
     required this.onToggle,
     required this.onToggleMute,
+    required this.onSwap,
     required this.onExit,
   });
 
@@ -722,14 +748,20 @@ class _ControlBar extends StatelessWidget {
           // Language pair label
           Expanded(
             child: Text(
-              '${srcLang.flag} ${srcLang.code.toUpperCase()} → '
-              '${tgtLang.flag} ${tgtLang.code.toUpperCase()}',
+              '${srcLang.code.toUpperCase()} → '
+              '${tgtLang.code.toUpperCase()}',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
+          ),
+          // Swap languages button — quick turn-taking for the other speaker.
+          IconButton(
+            tooltip: 'Swap languages',
+            icon: const Icon(Icons.swap_vert, color: Color(0xFFBDBDBD), size: 22),
+            onPressed: onSwap,
           ),
           // Mute / unmute button
           IconButton(
