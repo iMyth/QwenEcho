@@ -88,7 +88,7 @@ final class TtsPlayer: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
 
         // Configure for interpretation: slightly faster than default so the
         // user hears the translation promptly, but not so fast it's unintelligible.
-        utterance.rate = AVSpeechSynthesisSpeechRate(rawValue: 0.52) ?? 0.5
+        utterance.rate = 0.52
         utterance.pitchMultiplier = 1.0
         utterance.volume = 1.0
         utterance.preUtteranceDelay = 0.0
