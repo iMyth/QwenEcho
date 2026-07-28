@@ -61,7 +61,7 @@ flutter {
 // Auto-download sherpa-onnx AAR if not present.
 // ---------------------------------------------------------------------------
 val sherpaOnnxAarFile = file("libs/sherpa-onnx.aar")
-val sherpaOnnxAarUrl = "https://huggingface.co/csukuangfj/sherpa-onnx-libs/resolve/main/android/sherpa-onnx-v1.10.45.aar"
+val sherpaOnnxAarUrl = "https://huggingface.co/csukuangfj/sherpa-onnx-libs/resolve/main/android/aar/sherpa-onnx-1.12.21.aar"
 
 tasks.register("downloadSherpaOnnxAar") {
     description = "Download sherpa-onnx Android AAR from HuggingFace"

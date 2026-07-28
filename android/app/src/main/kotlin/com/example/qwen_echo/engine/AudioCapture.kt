@@ -128,13 +128,14 @@ class AudioCapture {
                         bufferCount++
                         if (bufferCount == 1 || bufferCount - lastDiagnosticBufferCount >= 50) {
                             var sum: Long = 0
-                            var peak: Short = 0
+                            var peak: Int = 0
                             for (s in samples) {
-                                sum += abs(s.toLong())
-                                if (abs(s.toInt()) > abs(peak.toInt())) peak = s
+                                val v = kotlin.math.abs(s.toInt())
+                                sum += v.toLong()
+                                if (v > peak) peak = v
                             }
                             val avg = if (samples.isNotEmpty()) (sum / samples.size).toInt() else 0
-                            Log.d(TAG, "diag #$bufferCount: frames=${samples.size} avg=$avg peak=${abs(peak.toInt())}")
+                            Log.d(TAG, "diag #$bufferCount: frames=${samples.size} avg=$avg peak=$peak")
                             lastDiagnosticBufferCount = bufferCount
                         }
                     } else if (read < 0) {
@@ -182,6 +183,4 @@ class AudioCapture {
         callback = null
         Log.d(TAG, "Audio capture stopped")
     }
-
-    private fun abs(value: Long): Long = if (value < 0) -value else value
 }
