@@ -58,10 +58,15 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      # Install CocoaPods dependencies (Pods/ is gitignored)
+      - name: Pod install
+        run: cd ios && pod install
+
       # Xcode resolves the sherpa-onnx-spm SPM package automatically.
       # Models are NOT needed for build verification — only for runtime.
+      # Disable Flutter's SPM integration — we use CocoaPods + Xcode SPM directly.
       - name: Build iOS (no codesign)
-        run: flutter build ios --no-codesign --no-pub
+        run: flutter build ios --no-codesign --no-pub --no-swift-package-manager
 
   build-apk:
     name: Android Build (APK)
