@@ -47,10 +47,8 @@ kotlin {
 
 dependencies {
     // sherpa-onnx Android AAR — auto-downloaded by the downloadSherpaOnnxAar task.
-    val aarFile = file("libs/sherpa-onnx.aar")
-    if (aarFile.exists()) {
-        implementation(files("libs/sherpa-onnx.aar"))
-    }
+    // The download runs before compilation, so the AAR is always available here.
+    implementation(files("libs/sherpa-onnx.aar"))
 }
 
 flutter {
