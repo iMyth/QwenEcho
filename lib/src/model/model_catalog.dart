@@ -9,7 +9,8 @@
 /// - LLM: a single GGUF file (`*.gguf`) consumed by llamadart.
 /// - ASR: a SenseVoice-Small ONNX model package directory containing
 ///   `model.int8.onnx` and `tokens.txt`.
-/// - TTS: deferred to Phase 5.
+/// - TTS: handled by iOS system voices (AVSpeechSynthesizer) — no model file
+///   required, so [ModelKind.tts] has no [ModelSpec] in [kRequiredModels].
 library;
 
 /// The kind of model, matching the pipeline stage order (ASR = 0, LLM = 1, TTS = 2).
@@ -20,7 +21,7 @@ enum ModelKind {
   /// Bilingual translation LLM (Qwen3.5-0.8B via llamadart/llama.cpp GGUF).
   llm,
 
-  /// Text-to-Speech (deferred — Phase 5).
+  /// Text-to-Speech — handled by iOS system voices, no on-disk model.
   tts,
 }
 
@@ -54,7 +55,7 @@ class ModelSpec {
 /// The models required to run the interpretation pipeline.
 ///
 /// Both the ASR package and the LLM GGUF file must be imported locally.
-/// TTS is deferred to Phase 5.
+/// TTS uses iOS system voices and requires no model file.
 const List<ModelSpec> kRequiredModels = <ModelSpec>[
   ModelSpec(
     kind: ModelKind.asr,
