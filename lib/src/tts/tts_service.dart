@@ -9,6 +9,7 @@
 library;
 
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 /// Exception thrown when the TTS plugin returns an error.
 class TtsException implements Exception {
@@ -53,7 +54,7 @@ class TtsService {
     } on PlatformException catch (e) {
       // Non-fatal — log and continue. The translation is still visible on
       // screen, so failed audio shouldn't crash the interpretation flow.
-      print('[TtsService] speak failed: ${e.code} — ${e.message}');
+      debugPrint('[TtsService] speak failed: ${e.code} — ${e.message}');
     }
   }
 
@@ -62,7 +63,7 @@ class TtsService {
     try {
       await _channel.invokeMethod('stop');
     } on PlatformException catch (e) {
-      print('[TtsService] stop failed: ${e.code}');
+      debugPrint('[TtsService] stop failed: ${e.code}');
     }
   }
 
@@ -75,7 +76,7 @@ class TtsService {
       }
       return [];
     } on PlatformException catch (e) {
-      print('[TtsService] getVoices failed: ${e.code}');
+      debugPrint('[TtsService] getVoices failed: ${e.code}');
       return [];
     }
   }

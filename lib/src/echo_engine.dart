@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 import 'llm/llm_service.dart';
 import 'messages.dart';
@@ -64,7 +65,7 @@ class EchoEngine {
     _eventSubscription = _eventChannel.receiveBroadcastStream().listen(
       _onEvent,
       onError: (error) {
-        print('[EchoEngine] EventChannel error: $error');
+        debugPrint('[EchoEngine] EventChannel error: $error');
       },
     );
   }
@@ -83,9 +84,9 @@ class EchoEngine {
     required String llmPath,
     String? ttsPath,
   }) async {
-    print('[EchoEngine] Initializing with models:');
-    print('[EchoEngine]   ASR: $asrPath');
-    print('[EchoEngine]   LLM: $llmPath');
+    debugPrint('[EchoEngine] Initializing with models:');
+    debugPrint('[EchoEngine]   ASR: $asrPath');
+    debugPrint('[EchoEngine]   LLM: $llmPath');
 
     await _methodChannel.invokeMethod('initialize', {
       'asrPath': asrPath,
@@ -111,7 +112,7 @@ class EchoEngine {
   /// - `start_failed` / `Audio capture failed` — AVAudioEngine could not
   ///   start (device mic unavailable).
   Future<void> start({required String srcLang, required String tgtLang}) async {
-    print('[EchoEngine] Starting pipeline: $srcLang -> $tgtLang');
+    debugPrint('[EchoEngine] Starting pipeline: $srcLang -> $tgtLang');
     _srcLang = srcLang;
     _tgtLang = tgtLang;
     try {
@@ -123,7 +124,7 @@ class EchoEngine {
     } on PlatformException catch (e) {
       // Leave state as `ready` so the user can retry after fixing the
       // underlying issue (e.g. enabling mic in Settings).
-      print('[EchoEngine] start failed: ${e.code} — ${e.message}');
+      debugPrint('[EchoEngine] start failed: ${e.code} — ${e.message}');
       _messageController.add(ErrorMessage(
         code: -7,
         detail: 'Start failed: ${e.message ?? e.code}',
@@ -138,21 +139,36 @@ class EchoEngine {
     _state = EchoEngineState.ready;
   }
 
+  /// Swap the source and target languages during an active session.
+  ///
+  /// Updates both the Dart-side language pair (so the LLM prompt uses the
+  /// new direction on the next translation) and the native ASR stage (so
+  /// the language hint sent to SenseVoice is correct).
+  Future<void> setLanguage({required String srcLang, required String tgtLang}) async {
+    debugPrint('[EchoEngine] setLanguage: $srcLang -> $tgtLang');
+    _srcLang = srcLang;
+    _tgtLang = tgtLang;
+    await _methodChannel.invokeMethod('setLanguage', {
+      'srcLang': srcLang,
+      'tgtLang': tgtLang,
+    });
+  }
+
   /// Inject test text for simulator debugging (no microphone required).
   ///
   /// Posts a fake ASR-confirmed segment through the native side, which
   /// triggers the LLM translation pipeline and UI display.
   Future<void> testInject(String text, {int speakerId = 0}) async {
-    print('[EchoEngine] Injecting test text: $text');
+    debugPrint('[EchoEngine] Injecting test text: $text');
     try {
       await _methodChannel.invokeMethod('test_inject', {
         'text': text,
         'speakerId': speakerId,
       });
-      print('[EchoEngine] Test inject completed');
+      debugPrint('[EchoEngine] Test inject completed');
     } catch (e, st) {
-      print('[EchoEngine] Test inject failed: $e');
-      print('[EchoEngine] $st');
+      debugPrint('[EchoEngine] Test inject failed: $e');
+      debugPrint('[EchoEngine] $st');
       rethrow;
     }
   }
@@ -180,7 +196,7 @@ class EchoEngine {
           _runTranslation(message);
         }
       } else {
-        print('[EchoEngine] Failed to parse event: $event');
+        debugPrint('[EchoEngine] Failed to parse event: $event');
       }
     }
   }
@@ -190,7 +206,7 @@ class EchoEngine {
     final segmentId = asr.segmentId;
     final sourceText = asr.text;
 
-    print('[EchoEngine] Running translation for segment $segmentId: $sourceText');
+    debugPrint('[EchoEngine] Running translation for segment $segmentId: $sourceText');
 
     String buffer = '';
     _llmService
@@ -202,7 +218,7 @@ class EchoEngine {
         .timeout(
       const Duration(seconds: 30),
       onTimeout: (sink) {
-        print('[EchoEngine] Translation timed out');
+        debugPrint('[EchoEngine] Translation timed out');
         sink.close();
         _messageController.add(ErrorMessage(
           code: -6,
@@ -220,7 +236,7 @@ class EchoEngine {
         ));
       },
       onDone: () {
-        print('[EchoEngine] Translation done for segment $segmentId: $buffer');
+        debugPrint('[EchoEngine] Translation done for segment $segmentId: $buffer');
         _llmService.addToContext(sourceText, buffer);
         _messageController.add(TranslationDoneMessage(
           speakerId: speakerId,
@@ -229,7 +245,7 @@ class EchoEngine {
         ));
       },
       onError: (error) {
-        print('[EchoEngine] Translation failed: $error');
+        debugPrint('[EchoEngine] Translation failed: $error');
         _messageController.add(ErrorMessage(
           code: -5,
           detail: 'Translation failed: $error',

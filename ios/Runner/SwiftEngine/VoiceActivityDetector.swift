@@ -52,10 +52,10 @@ final class VoiceActivityDetector {
     private let frameSize: Int
 
     init(sampleRate: Int = 16000,
-         silenceThresholdMs: Int = 250,
-         minSpeechMs: Int = 150,
+         silenceThresholdMs: Int = 400,
+         minSpeechMs: Int = 300,
          maxSegmentMs: Int = 8000,
-         noiseEnergyThreshold: Int32 = 120) {
+         noiseEnergyThreshold: Int32 = 500) {
         self.sampleRate = sampleRate
         self.silenceThresholdMs = silenceThresholdMs
         self.minSpeechMs = minSpeechMs

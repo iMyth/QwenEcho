@@ -52,6 +52,16 @@ final class EnginePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
             pipeline.stop()
             result(nil)
 
+        case "setLanguage":
+            guard let args = call.arguments as? [String: Any],
+                  let srcLang = args["srcLang"] as? String,
+                  let tgtLang = args["tgtLang"] as? String else {
+                result(FlutterError(code: "invalid_args", message: "Missing srcLang/tgtLang", details: nil))
+                return
+            }
+            pipeline.setLanguage(srcLang: srcLang, tgtLang: tgtLang)
+            result(["success": true])
+
         case "test_inject":
             guard let args = call.arguments as? [String: Any],
                   let text = args["text"] as? String else {
