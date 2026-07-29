@@ -70,8 +70,10 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
 
     try {
       // Download ASR model
+      print('[Download] Starting ASR download...');
       await for (final progress in _downloader.downloadModel(asrSpec)) {
         if (!mounted) return;
+        print('[Download] ASR progress: ${(progress.progress * 100).toStringAsFixed(1)}% (${progress.downloadedBytes}/${progress.totalBytes})');
         setState(() {
           _progress[ModelKind.asr] = progress;
         });
@@ -84,12 +86,17 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
           return;
         }
 
-        if (progress.isComplete) break;
+        if (progress.isComplete) {
+          print('[Download] ASR download complete!');
+          break;
+        }
       }
 
       // Download LLM model
+      print('[Download] Starting LLM download...');
       await for (final progress in _downloader.downloadModel(llmSpec)) {
         if (!mounted) return;
+        print('[Download] LLM progress: ${(progress.progress * 100).toStringAsFixed(1)}% (${progress.downloadedBytes}/${progress.totalBytes})');
         setState(() {
           _progress[ModelKind.llm] = progress;
         });
@@ -102,7 +109,10 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
           return;
         }
 
-        if (progress.isComplete) break;
+        if (progress.isComplete) {
+          print('[Download] LLM download complete!');
+          break;
+        }
       }
 
       // All downloads complete
