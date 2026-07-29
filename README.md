@@ -49,6 +49,18 @@ QwenEcho/
 │   ├── EnginePlugin.swift          # MethodChannel/EventChannel bridge
 │   ├── MessageStream.swift         # Event sink dispatcher
 │   └── EchoMessage.swift           # Native message type definitions
+├── android/app/src/main/kotlin/    # Android Native Engine (Kotlin)
+│   └── com/example/qwen_echo/engine/
+│       ├── AudioCapture.kt         # AudioRecord mic tap (16kHz Int16 directly)
+│       ├── VoiceActivityDetector.kt # Energy-based VAD + segment locking
+│       ├── AsrStage.kt             # sherpa-onnx OfflineRecognizer wrapper
+│       ├── PipelineController.kt   # Audio → VAD → ASR orchestration
+│       ├── ThermalMonitor.kt       # PowerManager thermal state monitoring
+│       ├── TtsPlayer.kt            # Android TextToSpeech wrapper
+│       ├── EnginePlugin.kt         # MethodChannel/EventChannel bridge
+│       ├── TtsPlugin.kt            # TTS MethodChannel bridge
+│       ├── MessageStream.kt        # Event sink dispatcher
+│       └── EchoMessage.kt          # Native message type definitions
 ├── test/                           # Flutter widget tests
 ├── pubspec.yaml
 └── README.md
@@ -96,12 +108,18 @@ QwenEcho/
 
 ## Requirements
 
-- **iOS**: 16+, arm64, 4GB+ RAM recommended
-- **Models**: ~750 MB total disk space for ASR package + LLM GGUF
-- **Build**: Xcode 15+, Flutter 3.16+, Swift 5.9+
-- **Simulator**: Enable Mac mic passthrough via Simulator menu → Features → Audio Input → `<your Mac's mic>`
+| | iOS | Android |
+|---|---|---|
+| **OS** | 16+ | API 24+ (Android 7.0) |
+| **Arch** | arm64 | arm64-v8a |
+| **RAM** | 4GB+ recommended | 4GB+ recommended |
+| **Build** | Xcode 15+, Flutter 3.16+, Swift 5.9+ | Android Studio, JDK 17, Flutter 3.16+ |
 
-Android is **not yet implemented** — only the iOS Swift engine exists.
+- **Models**: ~750 MB total disk space for ASR package + LLM GGUF
+- **iOS Simulator**: Enable Mac mic passthrough via Simulator menu → Features → Audio Input → `<your Mac's mic>`
+- **Android Emulator**: Enable microphone passthrough via Extended controls → Microphone
+
+Both iOS and Android are supported. The Kotlin engine mirrors the iOS Swift pipeline.
 
 ## Building
 
@@ -150,12 +168,31 @@ merged — so no separate `prepare.sh` step is needed. The Swift API wrapper
 (`ios/Runner/SwiftEngine/SherpaOnnx.swift`) is vendored directly in the
 Runner target.
 
+#### Android native dependencies
+
+ASR uses the [sherpa-onnx Android AAR](https://huggingface.co/csukuangfj/sherpa-onnx-libs)
+(~37MB). It is auto-downloaded by a Gradle task on first build, or you can
+download it manually:
+
+```bash
+# Auto-downloaded by Gradle, or download manually:
+mkdir -p android/app/libs
+curl -L "https://huggingface.co/csukuangfj/sherpa-onnx-libs/resolve/main/android/aar/sherpa-onnx-1.12.21.aar" \
+  -o android/app/libs/sherpa-onnx.aar
+```
+
+The Kotlin engine (`android/app/src/main/kotlin/.../engine/`) mirrors the iOS
+Swift pipeline: `AudioRecord` → `VoiceActivityDetector` → `AsrStage`
+(sherpa-onnx `OfflineRecognizer` with SenseVoice) → `TtsPlayer` (Android
+system `TextToSpeech`).
+
 ### Build & Run
 
 ```bash
 flutter pub get
-flutter run                # picks a connected device / simulator
-flutter build ios --release
+flutter run                # picks a connected device / simulator / emulator
+flutter build ios --release   # iOS
+flutter build apk --release   # Android
 ```
 
 ### First Launch
@@ -166,6 +203,49 @@ flutter build ios --release
 4. Tap **Start Interpreting** → app asks for microphone permission → split view appears.
 5. The pipeline starts automatically. Speak into the mic; your speech transcribes in your half (bottom, normal orientation) and the translation appears + is spoken aloud in the opposing half (top, rotated 180°).
 6. Use the central mic button to pause/resume. Use the speaker icon to mute TTS output.
+
+### Android Setup Notes
+
+#### Pushing models to device
+
+Models (~750MB) are not bundled in the APK. On Android, push them via `adb` to
+the app's external storage directory (no root required):
+
+```bash
+# Create directory structure
+adb shell mkdir -p /sdcard/Android/data/com.example.qwen_echo/files/models/SenseVoiceSmall-onnx
+
+# Push ASR model
+adb push models/SenseVoiceSmall-onnx/model.int8.onnx \
+  /sdcard/Android/data/com.example.qwen_echo/files/models/SenseVoiceSmall-onnx/
+adb push models/SenseVoiceSmall-onnx/tokens.txt \
+  /sdcard/Android/data/com.example.qwen_echo/files/models/SenseVoiceSmall-onnx/
+
+# Push LLM model
+adb push models/Qwen3.5-0.8B-Q4_K_M.gguf \
+  /sdcard/Android/data/com.example.qwen_echo/files/models/
+```
+
+The app checks this path on startup and should show **Models ready: 2/2**.
+
+> **Note:** Reinstalling the APK may clear this directory. Re-push if models
+> disappear after an update.
+
+#### TTS (Text-to-Speech)
+
+Android uses the system `TextToSpeech` engine. You must:
+
+1. Go to **Settings → Accessibility → Text-to-speech output**
+2. Select **Google** as the preferred engine
+3. Download voice data for your languages (Chinese, English, etc.)
+
+If TTS is not configured, the app will show "No TTS voice for language" when
+trying to speak translations.
+
+#### Microphone permission
+
+The app requests microphone permission on first start. If denied, go to
+**Settings → Apps → Qwen Echo → Permissions → Microphone** and allow it.
 
 ## UI Walkthrough
 
@@ -237,7 +317,7 @@ For simulator testing without a microphone, use `engine.testInject('你好世界
 
 ## Roadmap
 
-- **Android engine** — mirror the Swift pipeline in Kotlin/JNI with NNAPI + AAudio
+- **~~Android engine~~** — ✅ Done. Kotlin pipeline mirrors the Swift engine (AudioRecord → VAD → sherpa-onnx → TTS).
 - **Qwen3-TTS-Streaming** — replace system voices with the ~250MB streaming TTS model for higher-quality output
 - **C++ native engine** — unify ASR/LLM/TTS under a single cross-platform C++ core with a lock-free SPSC ring buffer (the architecture originally described)
 - **Bluetooth audio routing** — per-device output so each speaker hears through their own earbud

@@ -35,3 +35,14 @@ pubspec.lock
 # Generated
 *.g.dart
 *.freezed.dart
+
+# Android
+android/.gradle/
+android/app/libs/*.aar
+android/local.properties
+android/*.iml
+android/app/build/
+*.apk
+*.aab
+*.jks
+*.keystore

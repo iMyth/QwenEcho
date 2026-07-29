@@ -21,7 +21,6 @@ class LlmServiceException implements Exception {
 /// High-level wrapper around llamadart for translation.
 class LlmService {
   LlamaEngine? _engine;
-  ChatSession? _session;
 
   /// Maximum number of previous translation pairs to keep as context.
   static const int _maxContextPairs = 3;
@@ -54,7 +53,6 @@ class LlmService {
         ),
       );
       _engine = engine;
-      _session = ChatSession(engine);
       debugPrint('[LlmService] Model loaded successfully');
     } catch (e, st) {
       debugPrint('[LlmService] Failed to load model: $e');
@@ -75,27 +73,33 @@ class LlmService {
     int maxTokens = 128,
     double temperature = 0.3,
   }) {
-    final session = _session;
-    if (session == null) {
+    final engine = _engine;
+    if (engine == null) {
       return Stream.fromFuture(
         Future.error(LlmServiceException('Model not loaded')),
       );
     }
 
+    // Build the prompt manually using Qwen3.5-Instruct chat format.
+    // We bypass ChatSession's template rendering because we build the
+    // template ourselves, and enableThinking needs to be applied at the
+    // template level — using ChatSession would double-apply the template
+    // and break thinking suppression.
     final prompt = _buildPrompt(text, srcLang: srcLang, tgtLang: tgtLang);
     final params = GenerationParams(maxTokens: maxTokens, temp: temperature);
 
-    debugPrint('[LlmService] Starting translation with prompt length ${prompt.length}');
+    debugPrint(
+        '[LlmService] Starting translation with prompt length ${prompt.length}');
 
-    return session
+    return engine
         .create(
-          [LlamaTextContent(prompt)],
+          [
+            LlamaChatMessage.fromText(
+              role: LlamaChatRole.user,
+              text: prompt,
+            )
+          ],
           params: params,
-          // Qwen3 / Qwen3.5 default to "thinking mode": all generated text
-          // goes to the `thinking` field of the chunk delta while `content`
-          // stays null. For a pure translation task we don't want the model
-          // to reason aloud — disable thinking so it writes directly to
-          // `content`, which is what we read downstream.
           enableThinking: false,
         )
         .handleError((Object error, StackTrace stackTrace) {
@@ -125,7 +129,6 @@ class LlmService {
 
   /// Release the underlying engine and clear state.
   Future<void> dispose() async {
-    _session = null;
     final engine = _engine;
     _engine = null;
     _context.clear();
@@ -153,7 +156,7 @@ class LlmService {
     );
     buffer.writeln(imEnd);
     buffer.writeln('$imStart user');
-    buffer.writeln('$text /no_think');
+    buffer.writeln(text);
     buffer.writeln(imEnd);
     buffer.writeln('$imStart assistant');
     return buffer.toString();

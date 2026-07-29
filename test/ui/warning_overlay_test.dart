@@ -88,12 +88,9 @@ void main() {
       ));
 
       // Send 3 warnings.
-      controller
-          .add(const LatencyWarningMessage(stage: 'ASR', actualMs: 300));
-      controller
-          .add(const LatencyWarningMessage(stage: 'LLM', actualMs: 600));
-      controller
-          .add(const LatencyWarningMessage(stage: 'TTS', actualMs: 200));
+      controller.add(const LatencyWarningMessage(stage: 'ASR', actualMs: 300));
+      controller.add(const LatencyWarningMessage(stage: 'LLM', actualMs: 600));
+      controller.add(const LatencyWarningMessage(stage: 'TTS', actualMs: 200));
       await tester.pump();
 
       // Only 2 visible (max), oldest dropped.
@@ -125,8 +122,7 @@ void main() {
         ),
       ));
 
-      controller.add(
-          const LatencyWarningMessage(stage: 'ASR', actualMs: 350));
+      controller.add(const LatencyWarningMessage(stage: 'ASR', actualMs: 350));
       await tester.pump();
 
       expect(find.textContaining('ASR'), findsOneWidget);
@@ -153,10 +149,9 @@ void main() {
         ),
       ));
 
-      controller.add(const AsrPartialMessage(
-          speakerId: 0, text: 'hello', segmentId: 0));
-      controller
-          .add(const ThermalStateMessage(mode: 1, detail: 'Throttle'));
+      controller.add(
+          const AsrPartialMessage(speakerId: 0, text: 'hello', segmentId: 0));
+      controller.add(const ThermalStateMessage(mode: 1, detail: 'Throttle'));
       await tester.pump();
 
       // No warnings displayed.

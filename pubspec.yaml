@@ -30,8 +30,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Bundle local GGUF models into the app bundle for simulator/development.
-  # Remove before release to reduce bundle size.
-  assets:
-    - models/
-    - models/SenseVoiceSmall-onnx/
+  # Models are NOT bundled as Flutter assets — they're too large (~750MB).
+  # Instead, they're downloaded via scripts/setup_models.sh or imported by
+  # the user, and loaded directly from the filesystem at runtime.
+  # See README.md for model provisioning instructions.

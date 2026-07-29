@@ -184,8 +184,7 @@ class TtsStartedMessage extends EchoMessage {
   });
 
   @override
-  String toString() =>
-      'TtsStartedMessage(speaker=$speakerId, seg=$segmentId)';
+  String toString() => 'TtsStartedMessage(speaker=$speakerId, seg=$segmentId)';
 }
 
 /// TTS playback completed for a translated segment.
@@ -199,6 +198,5 @@ class TtsCompleteMessage extends EchoMessage {
   });
 
   @override
-  String toString() =>
-      'TtsCompleteMessage(speaker=$speakerId, seg=$segmentId)';
+  String toString() => 'TtsCompleteMessage(speaker=$speakerId, seg=$segmentId)';
 }
