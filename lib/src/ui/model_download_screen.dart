@@ -260,11 +260,11 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.grey.shade300,
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
                     textStyle: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
                     ),
                   ),
                   child: const Text('取消'),
