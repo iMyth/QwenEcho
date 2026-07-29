@@ -97,13 +97,6 @@ final class TtsPlayer: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
 
         os_log("[TtsPlayer] Speaking (%{public}@): %{public}@", lang, text)
 
-        // Notify pipeline to pause audio input (avoid feedback loop)
-        NotificationCenter.default.post(
-            name: NSNotification.Name("TtsSpeakingStateChanged"),
-            object: nil,
-            userInfo: ["isSpeaking": true]
-        )
-
         // We complete the MethodChannel call immediately so the Dart side
         // isn't blocked waiting for audio to finish. The actual playback
         // happens asynchronously; the delegate reports completion via logs
@@ -179,12 +172,6 @@ final class TtsPlayer: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
                            didFinish utterance: AVSpeechUtterance) {
         os_log("[TtsPlayer] didFinish utterance")
-        // Notify pipeline to resume audio input
-        NotificationCenter.default.post(
-            name: NSNotification.Name("TtsSpeakingStateChanged"),
-            object: nil,
-            userInfo: ["isSpeaking": false]
-        )
         completion?()
         completion = nil
     }
@@ -192,12 +179,6 @@ final class TtsPlayer: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
                            didCancel utterance: AVSpeechUtterance) {
         os_log("[TtsPlayer] didCancel utterance")
-        // Notify pipeline to resume audio input
-        NotificationCenter.default.post(
-            name: NSNotification.Name("TtsSpeakingStateChanged"),
-            object: nil,
-            userInfo: ["isSpeaking": false]
-        )
         completion?()
         completion = nil
     }
