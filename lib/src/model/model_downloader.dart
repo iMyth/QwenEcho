@@ -170,6 +170,7 @@ class ModelDownloader {
       final totalBytes = response.contentLength;
       int downloadedBytes = 0;
       final startTime = DateTime.now();
+      DateTime lastProgressUpdate = startTime;
 
       final sink = tempFile.openWrite();
 
@@ -190,24 +191,32 @@ class ModelDownloader {
         sink.add(chunk);
         downloadedBytes += chunk.length;
 
-        // Calculate speed
-        final elapsed = DateTime.now().difference(startTime).inMilliseconds / 1000.0;
-        final speed = elapsed > 0 ? downloadedBytes / elapsed : 0.0;
+        // Throttle progress updates to max 10 per second to avoid UI jitter
+        final now = DateTime.now();
+        final shouldUpdateProgress = now.difference(lastProgressUpdate).inMilliseconds >= 100;
 
-        yield DownloadProgress(
-          model: spec,
-          downloadedBytes: downloadedBytes,
-          totalBytes: totalBytes,
-          bytesPerSecond: speed,
-        );
+        if (shouldUpdateProgress) {
+          lastProgressUpdate = now;
 
-        // Also push to progress controller
-        _progressControllers[key]?.add(DownloadProgress(
-          model: spec,
-          downloadedBytes: downloadedBytes,
-          totalBytes: totalBytes,
-          bytesPerSecond: speed,
-        ));
+          // Calculate speed
+          final elapsed = now.difference(startTime).inMilliseconds / 1000.0;
+          final speed = elapsed > 0 ? downloadedBytes / elapsed : 0.0;
+
+          yield DownloadProgress(
+            model: spec,
+            downloadedBytes: downloadedBytes,
+            totalBytes: totalBytes,
+            bytesPerSecond: speed,
+          );
+
+          // Also push to progress controller
+          _progressControllers[key]?.add(DownloadProgress(
+            model: spec,
+            downloadedBytes: downloadedBytes,
+            totalBytes: totalBytes,
+            bytesPerSecond: speed,
+          ));
+        }
       }
 
       await sink.close();
