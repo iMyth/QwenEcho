@@ -26,10 +26,29 @@ final class PipelineController {
     private var srcLang: String = "zh"
     private var tgtLang: String = "en"
 
+    // TTS state - pause audio input when TTS is speaking to avoid feedback loop
+    private var isTtsSpeaking = false
+
     init(messages: MessageStream) {
         self.messages = messages
         self.asrStage = AsrStage(messages: messages)
         self.thermalMonitor = ThermalMonitor(messages: messages)
+
+        // Listen for TTS state changes to avoid audio feedback loop
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("TtsSpeakingStateChanged"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            if let isSpeaking = notification.userInfo?["isSpeaking"] as? Bool {
+                self?.isTtsSpeaking = isSpeaking
+                os_log("[Pipeline] TTS speaking state: %{public}@", String(isSpeaking))
+            }
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     /// Initialize with the ASR model package path.
@@ -118,7 +137,9 @@ final class PipelineController {
         // Start audio capture
         do {
             try audioCapture.start { [weak self] samples in
-                self?.vad.feedAudio(samples)
+                // Skip feeding audio to VAD when TTS is speaking to avoid feedback loop
+                guard let self = self, !self.isTtsSpeaking else { return }
+                self.vad.feedAudio(samples)
             }
         } catch {
             os_log("[Pipeline] Audio capture failed: %{public}@", error.localizedDescription)
