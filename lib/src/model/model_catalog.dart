@@ -60,16 +60,16 @@ const List<ModelSpec> kRequiredModels = <ModelSpec>[
   ModelSpec(
     kind: ModelKind.asr,
     displayName: 'SenseVoice-Small',
-    subtitle: 'Offline ASR · sherpa-onnx',
+    subtitle: 'Offline ASR · sherpa-onnx · 373 MB',
     dirName: 'SenseVoiceSmall-onnx',
-    maxSizeBytes: 300 * 1024 * 1024, // ~241MB expected; 300MB ceiling
+    maxSizeBytes: 400 * 1024 * 1024, // ~373MB actual; 400MB ceiling
   ),
   ModelSpec(
     kind: ModelKind.llm,
     displayName: 'Qwen3.5-0.8B',
-    subtitle: 'Bilingual Translation · llama.cpp GGUF',
+    subtitle: 'Bilingual Translation · llama.cpp GGUF · 508 MB',
     dirName: 'Qwen3.5-0.8B-Q4_K_M.gguf',
-    maxSizeBytes: 600 * 1024 * 1024, // ~513MB expected; 600MB ceiling
+    maxSizeBytes: 600 * 1024 * 1024, // ~508MB expected; 600MB ceiling
   ),
 ];
 
