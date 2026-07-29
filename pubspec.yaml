@@ -19,6 +19,9 @@ dependencies:
   http: ^1.2.0
   # Connection state detection for WiFi checks.
   connectivity_plus: ^6.0.3
+  # Archive extraction for ASR model (tar.bz2).
+  # Using ^4.0.9 to match llamadart's dependency.
+  archive: ^4.0.9
 
 # The pub-cache copy of path_provider_foundation 2.6.0 is incomplete (missing its
 # darwin/ native sources + podspec) due to an interrupted download, which breaks
