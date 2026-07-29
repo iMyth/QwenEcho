@@ -90,9 +90,9 @@ class ModelDownloader {
   static const String _llmUrl =
       'https://github.com/iMyth/QwenEcho/releases/download/v0.1.0/Qwen3.5-0.8B-Q4_K_M.gguf';
 
-  // ASR: sherpa-onnx official SenseVoice model (tar.bz2 archive)
+  // ASR: SenseVoice-Small model package (tar.bz2 archive)
   static const String _asrUrl =
-      'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2';
+      'https://github.com/iMyth/QwenEcho/releases/download/v0.1.0/SenseVoiceSmall-onnx.tar.bz2';
 
   /// Get the download URL for a model.
   String _getDownloadUrl(ModelSpec spec) {
