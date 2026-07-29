@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -27,6 +28,7 @@ sealed class AudioPermissionResult {
 class AudioCapture {
 
     private var audioRecord: AudioRecord? = null
+    private var echoCanceler: AcousticEchoCanceler? = null
     private var captureThread: Thread? = null
     private var callback: ((ShortArray) -> Unit)? = null
 
@@ -112,6 +114,16 @@ class AudioCapture {
                 return "AudioRecord initialization failed"
             }
 
+            // Enable Acoustic Echo Cancellation (AEC) to prevent TTS feedback loop.
+            // This allows users to speak continuously while TTS is playing.
+            if (AcousticEchoCanceler.isAvailable()) {
+                echoCanceler = AcousticEchoCanceler.create(audioRecord!!.audioSessionId)
+                echoCanceler?.enabled = true
+                Log.d(TAG, "Acoustic Echo Cancellation enabled")
+            } else {
+                Log.w(TAG, "Acoustic Echo Cancellation not available on this device")
+            }
+
             audioRecord?.startRecording()
             isRunning = true
             bufferCount = 0
@@ -171,6 +183,9 @@ class AudioCapture {
 
         captureThread?.interrupt()
         captureThread = null
+
+        echoCanceler?.release()
+        echoCanceler = null
 
         try {
             audioRecord?.stop()

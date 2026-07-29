@@ -138,10 +138,9 @@ class SpeakerHalfState extends State<SpeakerHalf> {
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
+        // Use jumpTo for immediate scroll (more reliable than animateTo)
+        _scrollController.jumpTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
         );
       }
     });
@@ -179,6 +178,8 @@ class SpeakerHalfState extends State<SpeakerHalf> {
     return ListView.builder(
       controller: _scrollController,
       itemCount: _lines.length,
+      reverse: false,
+      physics: const ClampingScrollPhysics(),
       itemBuilder: (context, index) {
         final line = _lines[index];
         return Padding(

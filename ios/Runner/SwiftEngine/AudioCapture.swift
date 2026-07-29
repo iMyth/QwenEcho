@@ -54,12 +54,18 @@ final class AudioCapture {
             // playback would either fail or force the session back to
             // `.playback`, breaking the mic tap on the next ASR segment.
             //
+            // `.voiceChat` mode enables Acoustic Echo Cancellation (AEC),
+            // which is critical for simultaneous interpretation: it prevents
+            // TTS output from being picked up by the microphone and creating
+            // a feedback loop. This allows users to speak continuously without
+            // interruptions when TTS is playing.
+            //
             // `.defaultToSpeaker` routes TTS output through the loudspeaker
             // (not the earpiece) so the person across the table can hear it.
             // `.allowBluetooth` keeps hands-free accessories working.
             try session.setCategory(
                 .playAndRecord,
-                mode: .default,
+                mode: .voiceChat,
                 options: [.defaultToSpeaker, .allowBluetoothHFP]
             )
             try session.setActive(true, options: [])

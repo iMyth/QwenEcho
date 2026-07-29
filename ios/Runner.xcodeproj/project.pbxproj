@@ -27,17 +27,6 @@
 		AA00200A /* TtsPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00100A /* TtsPlayer.swift */; };
 		AA00200B /* SherpaOnnx.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00100B /* SherpaOnnx.swift */; };
 		DD2158A030188E7C000D9D64 /* CSherpaOnnx in Frameworks */ = {isa = PBXBuildFile; productRef = CC000002 /* CSherpaOnnx */; };
-		DDA840AE3019893000E111D8 /* tokens.txt in Resources */ = {isa = PBXBuildFile; fileRef = DDA840AA3019893000E111D8 /* tokens.txt */; };
-		DDA840AF3019893000E111D8 /* tokens.json in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A93019893000E111D8 /* tokens.json */; };
-		DDA840B03019893000E111D8 /* config.yaml in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A43019893000E111D8 /* config.yaml */; };
-		DDA840B13019893000E111D8 /* model_quant.onnx in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A63019893000E111D8 /* model_quant.onnx */; };
-		DDA840B23019893000E111D8 /* model.int8.onnx in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A73019893000E111D8 /* model.int8.onnx */; };
-		DDA840B33019893000E111D8 /* .mv in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A23019893000E111D8 /* .mv */; };
-		DDA840B43019893000E111D8 /* am.mvn in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A33019893000E111D8 /* am.mvn */; };
-		DDA840B53019893000E111D8 /* .msc in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A13019893000E111D8 /* .msc */; };
-		DDA840B63019893000E111D8 /* configuration.json in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A53019893000E111D8 /* configuration.json */; };
-		DDA840B73019893000E111D8 /* Qwen3.5-0.8B-Q4_K_M.gguf in Resources */ = {isa = PBXBuildFile; fileRef = DDA840AC3019893000E111D8 /* Qwen3.5-0.8B-Q4_K_M.gguf */; };
-		DDA840B83019893000E111D8 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = DDA840A83019893000E111D8 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -93,17 +82,6 @@
 		AA00100B /* SherpaOnnx.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SherpaOnnx.swift; sourceTree = "<group>"; };
 		D380574F30681D701CE3F57D /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		DD9E2D3171D64FE132F48585 /* libPods-Runner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Runner.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		DDA840A13019893000E111D8 /* .msc */ = {isa = PBXFileReference; lastKnownFileType = file; path = .msc; sourceTree = "<group>"; };
-		DDA840A23019893000E111D8 /* .mv */ = {isa = PBXFileReference; lastKnownFileType = text; path = .mv; sourceTree = "<group>"; };
-		DDA840A33019893000E111D8 /* am.mvn */ = {isa = PBXFileReference; lastKnownFileType = text; path = am.mvn; sourceTree = "<group>"; };
-		DDA840A43019893000E111D8 /* config.yaml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = config.yaml; sourceTree = "<group>"; };
-		DDA840A53019893000E111D8 /* configuration.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = configuration.json; sourceTree = "<group>"; };
-		DDA840A63019893000E111D8 /* model_quant.onnx */ = {isa = PBXFileReference; lastKnownFileType = file; path = model_quant.onnx; sourceTree = "<group>"; };
-		DDA840A73019893000E111D8 /* model.int8.onnx */ = {isa = PBXFileReference; lastKnownFileType = file; path = model.int8.onnx; sourceTree = "<group>"; };
-		DDA840A83019893000E111D8 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		DDA840A93019893000E111D8 /* tokens.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tokens.json; sourceTree = "<group>"; };
-		DDA840AA3019893000E111D8 /* tokens.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = tokens.txt; sourceTree = "<group>"; };
-		DDA840AC3019893000E111D8 /* Qwen3.5-0.8B-Q4_K_M.gguf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Qwen3.5-0.8B-Q4_K_M.gguf"; sourceTree = "<group>"; };
 		E72E8227BF7284B8D049DF62 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -160,7 +138,6 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
-				DDA840AD3019893000E111D8 /* models */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -211,40 +188,6 @@
 				AA00100B /* SherpaOnnx.swift */,
 			);
 			path = SwiftEngine;
-			sourceTree = "<group>";
-		};
-		DDA840A03019893000E111D8 /* ._____temp */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = "._____temp";
-			sourceTree = "<group>";
-		};
-		DDA840AB3019893000E111D8 /* SenseVoiceSmall-onnx */ = {
-			isa = PBXGroup;
-			children = (
-				DDA840A03019893000E111D8 /* ._____temp */,
-				DDA840A13019893000E111D8 /* .msc */,
-				DDA840A23019893000E111D8 /* .mv */,
-				DDA840A33019893000E111D8 /* am.mvn */,
-				DDA840A43019893000E111D8 /* config.yaml */,
-				DDA840A53019893000E111D8 /* configuration.json */,
-				DDA840A63019893000E111D8 /* model_quant.onnx */,
-				DDA840A73019893000E111D8 /* model.int8.onnx */,
-				DDA840A83019893000E111D8 /* README.md */,
-				DDA840A93019893000E111D8 /* tokens.json */,
-				DDA840AA3019893000E111D8 /* tokens.txt */,
-			);
-			path = "SenseVoiceSmall-onnx";
-			sourceTree = "<group>";
-		};
-		DDA840AD3019893000E111D8 /* models */ = {
-			isa = PBXGroup;
-			children = (
-				DDA840AB3019893000E111D8 /* SenseVoiceSmall-onnx */,
-				DDA840AC3019893000E111D8 /* Qwen3.5-0.8B-Q4_K_M.gguf */,
-			);
-			path = models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -348,17 +291,6 @@
 			files = (
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
-				DDA840AE3019893000E111D8 /* tokens.txt in Resources */,
-				DDA840AF3019893000E111D8 /* tokens.json in Resources */,
-				DDA840B03019893000E111D8 /* config.yaml in Resources */,
-				DDA840B13019893000E111D8 /* model_quant.onnx in Resources */,
-				DDA840B23019893000E111D8 /* model.int8.onnx in Resources */,
-				DDA840B33019893000E111D8 /* .mv in Resources */,
-				DDA840B43019893000E111D8 /* am.mvn in Resources */,
-				DDA840B53019893000E111D8 /* .msc in Resources */,
-				DDA840B63019893000E111D8 /* configuration.json in Resources */,
-				DDA840B73019893000E111D8 /* Qwen3.5-0.8B-Q4_K_M.gguf in Resources */,
-				DDA840B83019893000E111D8 /* README.md in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
@@ -413,13 +345,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
