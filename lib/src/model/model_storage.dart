@@ -15,26 +15,11 @@ class ModelStorage {
 
   /// Get the base directory for model storage.
   ///
-  /// iOS: Documents/models/
-  /// Android: app-specific external storage (or internal if unavailable)
+  /// Uses the same path as ModelRepository to ensure consistency:
+  /// - All platforms: Application Support/models/
   Future<Directory> _getModelsBaseDir() async {
-    if (Platform.isIOS) {
-      final docsDir = await getApplicationDocumentsDirectory();
-      return Directory('${docsDir.path}/models');
-    } else if (Platform.isAndroid) {
-      // Try external storage first (more space)
-      final externalDirs = await getExternalStorageDirectories();
-      if (externalDirs != null && externalDirs.isNotEmpty) {
-        return Directory('${externalDirs.first.path}/models');
-      }
-      // Fallback to internal storage
-      final appDir = await getApplicationDocumentsDirectory();
-      return Directory('${appDir.path}/models');
-    } else {
-      // Desktop platforms (for development)
-      final docsDir = await getApplicationDocumentsDirectory();
-      return Directory('${docsDir.path}/models');
-    }
+    final base = await getApplicationSupportDirectory();
+    return Directory('${base.path}/models');
   }
 
   /// Get the full path for a specific model.
