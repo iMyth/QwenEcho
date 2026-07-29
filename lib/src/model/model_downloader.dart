@@ -124,6 +124,12 @@ class ModelDownloader {
   Stream<DownloadProgress> downloadModel(ModelSpec spec) async* {
     final key = spec.dirName;
 
+    // Reset any previous failed/cancelled state
+    if (_downloadStatus[key] == DownloadStatus.failed ||
+        _downloadStatus[key] == DownloadStatus.notStarted) {
+      _downloadStatus.remove(key);
+    }
+
     // Check if already downloading
     if (_downloadStatus[key] == DownloadStatus.downloading) {
       yield DownloadProgress(
