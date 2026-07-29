@@ -84,14 +84,25 @@ class ModelRepository {
   ///
   /// Checks in order:
   /// 1. App sandbox (`modelsDir()`)
-  /// 2. External storage `/sdcard/QwenEcho/models/` (Android, for easy adb push)
-  /// 3. Bundled Flutter assets (iOS/macOS only)
+  /// 2. iOS app bundle (models added to Xcode as folder references)
+  /// 3. External storage `/sdcard/QwenEcho/models/` (Android, for easy adb push)
+  /// 4. Bundled Flutter assets (iOS/macOS only)
   Future<ModelStatus> statusFor(ModelSpec spec) async {
     final modelPath = await pathFor(spec);
 
     // Check app sandbox first
     final sandboxStatus = await _checkModel(spec, modelPath);
     if (sandboxStatus != null) return sandboxStatus;
+
+    // Check iOS app bundle (for testing: models added to Xcode project)
+    if (Platform.isIOS) {
+      final bundlePath = _iosAppBundlePath;
+      if (bundlePath != null) {
+        final bundleModelPath = '$bundlePath/models/${spec.dirName}';
+        final bundleStatus = await _checkModel(spec, bundleModelPath);
+        if (bundleStatus != null) return bundleStatus;
+      }
+    }
 
     // On Android, also check app-specific external storage (no permission needed)
     // Path: /sdcard/Android/data/com.example.qwen_echo/files/models/
@@ -183,6 +194,19 @@ class ModelRepository {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  /// Path to the iOS app bundle root.
+  ///
+  /// On iOS, `Platform.resolvedExecutable` points to the app binary inside
+  /// the .app bundle. We go up one level to get the bundle root.
+  /// Models can be added to Xcode as "folder references" and will be
+  /// bundled at `<bundle>/models/`.
+  String? get _iosAppBundlePath {
+    if (!Platform.isIOS) return null;
+    // Platform.resolvedExecutable → /var/.../QwenEcho.app/QwenEcho
+    final executable = File(Platform.resolvedExecutable);
+    return executable.parent.path; // → /var/.../QwenEcho.app/
+  }
 
   /// Filesystem path to the Flutter assets directory inside the app bundle.
   ///
