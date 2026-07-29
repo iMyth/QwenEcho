@@ -128,8 +128,11 @@ class ModelRepository {
         final size = await file.length();
         final valid = await _isValidGguf(file);
         return ModelStatus(
-          spec: spec, path: path, present: true,
-          sizeBytes: size, valid: valid,
+          spec: spec,
+          path: path,
+          present: true,
+          sizeBytes: size,
+          valid: valid,
         );
       }
     } else {
@@ -138,8 +141,11 @@ class ModelRepository {
         final size = await _directorySize(dir);
         final valid = await _hasSherpaOnnxPackage(dir);
         return ModelStatus(
-          spec: spec, path: path, present: true,
-          sizeBytes: size, valid: valid,
+          spec: spec,
+          path: path,
+          present: true,
+          sizeBytes: size,
+          valid: valid,
         );
       }
     }

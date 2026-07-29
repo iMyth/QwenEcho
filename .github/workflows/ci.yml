@@ -64,9 +64,8 @@ jobs:
 
       # Xcode resolves the sherpa-onnx-spm SPM package automatically.
       # Models are NOT needed for build verification — only for runtime.
-      # Disable Flutter's SPM integration — we use CocoaPods + Xcode SPM directly.
       - name: Build iOS (no codesign)
-        run: flutter build ios --no-codesign --no-pub --no-swift-package-manager
+        run: flutter build ios --no-codesign --no-pub
 
   build-apk:
     name: Android Build (APK)

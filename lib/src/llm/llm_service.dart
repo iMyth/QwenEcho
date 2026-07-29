@@ -93,10 +93,12 @@ class LlmService {
 
     return engine
         .create(
-          [LlamaChatMessage.fromText(
-            role: LlamaChatRole.user,
-            text: prompt,
-          )],
+          [
+            LlamaChatMessage.fromText(
+              role: LlamaChatRole.user,
+              text: prompt,
+            )
+          ],
           params: params,
           enableThinking: false,
         )
