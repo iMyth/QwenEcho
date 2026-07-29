@@ -161,7 +161,7 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                '同声传译需要下载 AI 模型\n总大小: 约 740 MB',
+                '同声传译需要下载 AI 模型\n总大小：约 881 MB',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
@@ -199,13 +199,13 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                 _buildProgressCard(
                   ModelKind.asr,
                   'ASR 模型 (语音识别)',
-                  'SenseVoice-Small · 240 MB',
+                  'SenseVoice-Small · 373 MB',
                 ),
                 const SizedBox(height: 12),
                 _buildProgressCard(
                   ModelKind.llm,
                   'LLM 模型 (翻译)',
-                  'Qwen3.5-0.8B · 500 MB',
+                  'Qwen3.5-0.8B · 508 MB',
                 ),
                 const SizedBox(height: 24),
               ],
