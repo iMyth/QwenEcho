@@ -84,7 +84,8 @@ class ModelDownloader {
 
   // Track active downloads
   final Map<String, DownloadStatus> _downloadStatus = {};
-  final Map<String, StreamController<DownloadProgress>> _progressControllers = {};
+  final Map<String, StreamController<DownloadProgress>> _progressControllers =
+      {};
 
   // LLM: GitHub Releases
   static const String _llmUrl =
@@ -113,7 +114,8 @@ class ModelDownloader {
   Stream<DownloadProgress> getProgressStream(ModelSpec spec) {
     final key = spec.dirName;
     if (!_progressControllers.containsKey(key)) {
-      _progressControllers[key] = StreamController<DownloadProgress>.broadcast();
+      _progressControllers[key] =
+          StreamController<DownloadProgress>.broadcast();
     }
     return _progressControllers[key]!.stream;
   }
@@ -199,7 +201,8 @@ class ModelDownloader {
 
         // Throttle progress updates to max 10 per second to avoid UI jitter
         final now = DateTime.now();
-        final shouldUpdateProgress = now.difference(lastProgressUpdate).inMilliseconds >= 100;
+        final shouldUpdateProgress =
+            now.difference(lastProgressUpdate).inMilliseconds >= 100;
 
         if (shouldUpdateProgress) {
           lastProgressUpdate = now;
@@ -337,7 +340,8 @@ class ModelDownloader {
       String relativePath = file.name;
       if (relativePath.startsWith('$archiveRootDir/')) {
         relativePath = relativePath.substring(archiveRootDir.length + 1);
-      } else if (relativePath == archiveRootDir || relativePath == '$archiveRootDir/') {
+      } else if (relativePath == archiveRootDir ||
+          relativePath == '$archiveRootDir/') {
         continue; // Skip the root directory entry itself
       }
 

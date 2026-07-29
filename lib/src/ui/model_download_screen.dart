@@ -70,10 +70,11 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
 
     try {
       // Download ASR model
-      print('[Download] Starting ASR download...');
+      debugPrint('[Download] Starting ASR download...');
       await for (final progress in _downloader.downloadModel(asrSpec)) {
         if (!mounted) return;
-        print('[Download] ASR progress: ${(progress.progress * 100).toStringAsFixed(1)}% (${progress.downloadedBytes}/${progress.totalBytes})');
+        debugPrint(
+            '[Download] ASR progress: ${(progress.progress * 100).toStringAsFixed(1)}% (${progress.downloadedBytes}/${progress.totalBytes})');
         setState(() {
           _progress[ModelKind.asr] = progress;
         });
@@ -87,16 +88,17 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
         }
 
         if (progress.isComplete) {
-          print('[Download] ASR download complete!');
+          debugPrint('[Download] ASR download complete!');
           break;
         }
       }
 
       // Download LLM model
-      print('[Download] Starting LLM download...');
+      debugPrint('[Download] Starting LLM download...');
       await for (final progress in _downloader.downloadModel(llmSpec)) {
         if (!mounted) return;
-        print('[Download] LLM progress: ${(progress.progress * 100).toStringAsFixed(1)}% (${progress.downloadedBytes}/${progress.totalBytes})');
+        debugPrint(
+            '[Download] LLM progress: ${(progress.progress * 100).toStringAsFixed(1)}% (${progress.downloadedBytes}/${progress.totalBytes})');
         setState(() {
           _progress[ModelKind.llm] = progress;
         });
@@ -110,7 +112,7 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
         }
 
         if (progress.isComplete) {
-          print('[Download] LLM download complete!');
+          debugPrint('[Download] LLM download complete!');
           break;
         }
       }
@@ -249,10 +251,12 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                 ElevatedButton(
                   onPressed: () {
                     _downloader.cancelDownload(
-                      kRequiredModels.firstWhere((s) => s.kind == ModelKind.asr),
+                      kRequiredModels
+                          .firstWhere((s) => s.kind == ModelKind.asr),
                     );
                     _downloader.cancelDownload(
-                      kRequiredModels.firstWhere((s) => s.kind == ModelKind.llm),
+                      kRequiredModels
+                          .firstWhere((s) => s.kind == ModelKind.llm),
                     );
                     setState(() {
                       _isDownloading = false;
@@ -312,7 +316,8 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               else
-                Icon(Icons.hourglass_empty, color: Colors.grey.shade400, size: 20),
+                Icon(Icons.hourglass_empty,
+                    color: Colors.grey.shade400, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
