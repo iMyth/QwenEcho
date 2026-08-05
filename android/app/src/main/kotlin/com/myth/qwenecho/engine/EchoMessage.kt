@@ -1,4 +1,4 @@
-package com.example.qwen_echo.engine
+package com.myth.qwenecho.engine
 
 import android.util.Log
 

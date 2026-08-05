@@ -1,4 +1,4 @@
-package com.example.qwen_echo.engine
+package com.myth.qwenecho.engine
 
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener

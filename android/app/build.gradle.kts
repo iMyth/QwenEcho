@@ -9,7 +9,7 @@ plugins {
 }
 
 configure<ApplicationExtension> {
-    namespace = "com.example.qwen_echo"
+    namespace = "com.myth.qwenecho"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -19,7 +19,7 @@ configure<ApplicationExtension> {
     }
 
     defaultConfig {
-        applicationId = "com.example.qwen_echo"
+        applicationId = "com.myth.qwenecho"
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
