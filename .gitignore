@@ -35,6 +35,7 @@ pubspec.lock
 # Generated
 *.g.dart
 *.freezed.dart
+coverage/
 
 # Android
 android/.gradle/
