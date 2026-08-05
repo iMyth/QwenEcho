@@ -3,6 +3,13 @@ import AVFAudio
 import Flutter
 import os
 
+// MARK: - Notification Names for TTS Events
+
+extension Notification.Name {
+    static let ttsDidStart = Notification.Name("ttsDidStart")
+    static let ttsDidStop = Notification.Name("ttsDidStop")
+}
+
 /// Text-to-speech player using the system AVSpeechSynthesizer.
 ///
 /// QwenEcho currently uses the iOS system voices instead of a dedicated
@@ -167,11 +174,13 @@ final class TtsPlayer: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
                            didStart utterance: AVSpeechUtterance) {
         os_log("[TtsPlayer] didStart utterance")
+        NotificationCenter.default.post(name: .ttsDidStart, object: nil)
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
                            didFinish utterance: AVSpeechUtterance) {
         os_log("[TtsPlayer] didFinish utterance")
+        NotificationCenter.default.post(name: .ttsDidStop, object: nil)
         completion?()
         completion = nil
     }
@@ -179,6 +188,7 @@ final class TtsPlayer: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
                            didCancel utterance: AVSpeechUtterance) {
         os_log("[TtsPlayer] didCancel utterance")
+        NotificationCenter.default.post(name: .ttsDidStop, object: nil)
         completion?()
         completion = nil
     }

@@ -30,6 +30,35 @@ final class PipelineController {
         self.messages = messages
         self.asrStage = AsrStage(messages: messages)
         self.thermalMonitor = ThermalMonitor(messages: messages)
+
+        // Listen for TTS start/stop notifications to adjust VAD threshold
+        // This prevents TTS output from being detected as speech (echo cancellation)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onTTSStart),
+            name: .ttsDidStart,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onTTSStop),
+            name: .ttsDidStop,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func onTTSStart() {
+        os_log("[Pipeline] TTS started - raising VAD threshold to avoid echo")
+        vad.setThresholdMultiplier(2.5) // Make VAD less sensitive during TTS
+    }
+
+    @objc private func onTTSStop() {
+        os_log("[Pipeline] TTS stopped - restoring VAD threshold")
+        vad.setThresholdMultiplier(1.0) // Restore normal sensitivity
     }
 
     /// Initialize with the ASR model package path.
