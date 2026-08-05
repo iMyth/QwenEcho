@@ -1,4 +1,4 @@
-package com.example.qwen_echo.engine
+package com.myth.qwenecho.engine
 
 import android.Manifest
 import android.app.Activity

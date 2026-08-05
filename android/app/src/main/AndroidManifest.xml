@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Microphone permission for ASR audio capture -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Internet permission for model download from GitHub Releases -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:label="Qwen Echo"

@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../model/model_catalog.dart';
 import '../model/model_repository.dart';
+import 'model_download_screen.dart';
 
 /// Full-screen model management page.
 class ModelConfigScreen extends StatefulWidget {
@@ -163,9 +164,30 @@ class _ModelConfigScreenState extends State<ModelConfigScreen> {
               ],
             ),
           ),
+          if (!allReady)
+            TextButton.icon(
+              onPressed: () => _downloadMissingModels(),
+              icon: const Icon(Icons.download, size: 18),
+              label: const Text('Download'),
+              style: TextButton.styleFrom(foregroundColor: _accent),
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _downloadMissingModels() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModelDownloadScreen(
+          onComplete: () => Navigator.pop(context, true),
+        ),
+      ),
+    );
+    if (result == true) {
+      await _refresh();
+    }
   }
 }
 

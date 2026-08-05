@@ -92,22 +92,38 @@ class ModelStorage {
     return total;
   }
 
-  /// Get available disk space.
+  /// Get available disk space in bytes.
+  ///
+  /// Returns a conservative estimate. For accurate disk space checking,
+  /// a platform-specific implementation or plugin (e.g., `free_disk_space`)
+  /// should be used.
+  ///
+  /// This implementation checks if the storage directory is writable and
+  /// returns a conservative estimate suitable for preflight checks.
   Future<int> getAvailableSpace() async {
     final baseDir = await _getModelsBaseDir();
     final parent = baseDir.parent;
 
-    // Note: This is a simplified check. On mobile, getting exact free space
-    // requires platform channels. For now, we'll just check if the directory
-    // is writable.
     try {
-      final testFile = File('${parent.path}/.disk_test');
+      // Ensure parent directory exists
+      if (!await parent.exists()) {
+        await parent.create(recursive: true);
+      }
+
+      // Try to write a small test file to verify writability
+      final testFile = File('${parent.path}/.disk_space_test');
       await testFile.writeAsString('test');
       await testFile.delete();
-      // If we got here, the directory is writable
-      // Assume at least 2GB available (conservative estimate)
-      return 2 * 1024 * 1024 * 1024;
+
+      // Return a conservative estimate.
+      // In production, this should be replaced with a platform-specific
+      // implementation that queries actual free space.
+      // For now, assume at least 2GB is available if the directory is writable.
+      // Users with less space will encounter download failures, which are
+      // handled gracefully by the downloader.
+      return 2 * 1024 * 1024 * 1024; // 2 GB conservative estimate
     } catch (e) {
+      // Directory not writable or other error
       return 0;
     }
   }

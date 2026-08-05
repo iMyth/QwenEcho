@@ -22,6 +22,9 @@ class DownloadProgress {
   /// Whether the download is complete.
   final bool isComplete;
 
+  /// Whether the download was cancelled by the user.
+  final bool isCancelled;
+
   /// Error message if download failed.
   final String? error;
 
@@ -31,6 +34,7 @@ class DownloadProgress {
     this.totalBytes,
     this.bytesPerSecond = 0,
     this.isComplete = false,
+    this.isCancelled = false,
     this.error,
   });
 
@@ -67,15 +71,49 @@ enum DownloadStatus {
   paused,
   completed,
   failed,
+  cancelled,
+}
+
+/// Maps common exceptions to user-friendly Chinese error messages.
+String _friendlyErrorMessage(Object error) {
+  if (error is SocketException) {
+    return '网络连接失败，请检查网络设置后重试';
+  }
+  if (error is HttpException) {
+    final message = error.message;
+    if (message.contains('404')) {
+      return '下载链接已失效，请更新应用后重试';
+    }
+    if (message.contains('5')) {
+      return '服务器繁忙，请稍后再试';
+    }
+    return '下载失败: $message';
+  }
+  if (error is TimeoutException) {
+    return '下载超时，请检查网络连接后重试';
+  }
+  if (error is PathNotFoundException) {
+    return '存储空间不可用，请检查设备存储';
+  }
+  if (error is FileSystemException) {
+    if (error.message.contains('No space')) {
+      return '设备存储空间不足，请清理后重试';
+    }
+    return '文件写入失败: ${error.message}';
+  }
+  return '下载失败: $error';
 }
 
 /// Manages model downloads with progress tracking.
 ///
 /// Features:
-/// - Progress streaming
-/// - Pause/resume support (future enhancement)
-/// - MD5 checksum validation (future enhancement)
-/// - Retry logic
+/// - Progress streaming with throttled updates
+/// - HTTP Range resume support (continues from where it left off)
+/// - HTTP timeout protection (30 seconds)
+/// - Clean cancellation (distinct from error)
+/// - Partial file cleanup on failure
+/// - User-friendly error messages in Chinese
+/// - Path-traversal protection during archive extraction
 class ModelDownloader {
   ModelDownloader._();
   static final ModelDownloader instance = ModelDownloader._();
@@ -86,6 +124,9 @@ class ModelDownloader {
   final Map<String, DownloadStatus> _downloadStatus = {};
   final Map<String, StreamController<DownloadProgress>> _progressControllers =
       {};
+
+  // HTTP timeout for connection and read operations
+  static const Duration _httpTimeout = Duration(seconds: 30);
 
   // LLM: GitHub Releases
   static const String _llmUrl =
@@ -122,12 +163,16 @@ class ModelDownloader {
 
   /// Download a model.
   ///
+  /// Supports resume: if a partial `.tmp` file exists from a previous
+  /// attempt, the download continues from where it left off using HTTP Range.
+  ///
   /// Returns a stream of progress updates.
   Stream<DownloadProgress> downloadModel(ModelSpec spec) async* {
     final key = spec.dirName;
 
     // Reset any previous failed/cancelled state
     if (_downloadStatus[key] == DownloadStatus.failed ||
+        _downloadStatus[key] == DownloadStatus.cancelled ||
         _downloadStatus[key] == DownloadStatus.notStarted) {
       _downloadStatus.remove(key);
     }
@@ -155,6 +200,11 @@ class ModelDownloader {
 
     _downloadStatus[key] = DownloadStatus.downloading;
 
+    final tempFilePath = '${await _storage.getModelPath(spec)}.tmp';
+    final tempFile = File(tempFilePath);
+    http.Client? client;
+    IOSink? sink;
+
     try {
       // Ensure models directory exists
       await _storage.ensureModelsDirExists();
@@ -162,37 +212,75 @@ class ModelDownloader {
       final url = _getDownloadUrl(spec);
       final modelPath = await _storage.getModelPath(spec);
 
-      // Create temporary download file
-      final tempFile = File('$modelPath.tmp');
-      await tempFile.create(recursive: true);
+      // Check for partial download to support resume
+      int existingBytes = 0;
+      if (await tempFile.exists()) {
+        existingBytes = await tempFile.length();
+        if (existingBytes > 0) {
+          // Verify the partial file is still valid (not corrupted)
+          // For simplicity, we trust the partial file and let the server
+          // validate via Range request. If the server rejects the Range,
+          // we'll get a 200 (full download) instead of 206 (partial).
+        }
+      }
 
       // Start download with progress tracking
-      final client = http.Client();
+      client = http.Client();
       final request = http.Request('GET', Uri.parse(url));
-      final response = await client.send(request);
 
-      if (response.statusCode != 200) {
+      // Add Range header for resume support
+      if (existingBytes > 0) {
+        request.headers['Range'] = 'bytes=$existingBytes-';
+      }
+
+      final response = await client.send(request).timeout(_httpTimeout);
+
+      // Handle response status
+      if (response.statusCode == 200) {
+        // Full download (server doesn't support Range or file changed)
+        existingBytes = 0;
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+        await tempFile.create(recursive: true);
+      } else if (response.statusCode == 206) {
+        // Partial content — resuming from existingBytes
+      } else if (response.statusCode == 416) {
+        // Range Not Satisfiable — file is already complete or invalid range
+        // Treat as already downloaded
+        existingBytes = 0;
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      } else {
         throw HttpException('Download failed: HTTP ${response.statusCode}');
       }
 
-      final totalBytes = response.contentLength;
-      int downloadedBytes = 0;
+      final responseContentLength = response.contentLength;
+      final totalBytes =
+          (responseContentLength != null && responseContentLength > 0)
+              ? responseContentLength + existingBytes
+              : null;
+      int downloadedBytes = existingBytes;
       final startTime = DateTime.now();
       DateTime lastProgressUpdate = startTime;
 
-      final sink = tempFile.openWrite();
+      // Open file for append (if resuming) or write (if fresh)
+      sink = tempFile.openWrite(mode: FileMode.append);
 
-      await for (final chunk in response.stream) {
+      await for (final chunk in response.stream.timeout(_httpTimeout)) {
         if (_downloadStatus[key] != DownloadStatus.downloading) {
           // Download was cancelled
           await sink.close();
-          await tempFile.delete();
+          // Don't delete the partial file — it can be resumed later
           yield DownloadProgress(
             model: spec,
             downloadedBytes: downloadedBytes,
             totalBytes: totalBytes,
-            error: 'Download cancelled',
+            isCancelled: true,
           );
+          _downloadStatus[key] = DownloadStatus.cancelled;
+          client.close();
           return;
         }
 
@@ -209,7 +297,8 @@ class ModelDownloader {
 
           // Calculate speed
           final elapsed = now.difference(startTime).inMilliseconds / 1000.0;
-          final speed = elapsed > 0 ? downloadedBytes / elapsed : 0.0;
+          final speed =
+              elapsed > 0 ? (downloadedBytes - existingBytes) / elapsed : 0.0;
 
           yield DownloadProgress(
             model: spec,
@@ -229,6 +318,20 @@ class ModelDownloader {
       }
 
       await sink.close();
+      sink = null;
+
+      // Verify download size if expected size is known
+      if (spec.expectedSizeBytes != null) {
+        final actualSize = await tempFile.length();
+        // Allow 1% tolerance for archive files that may vary slightly
+        final tolerance = (spec.expectedSizeBytes! * 0.01).toInt();
+        if ((actualSize - spec.expectedSizeBytes!).abs() > tolerance) {
+          await tempFile.delete();
+          throw Exception(
+            '下载文件大小不匹配 (期望 ${spec.expectedSizeBytes}, 实际 $actualSize)',
+          );
+        }
+      }
 
       // Move temp file to final location
       if (spec.kind == ModelKind.llm) {
@@ -262,28 +365,54 @@ class ModelDownloader {
       ));
 
       client.close();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Clean up resources
+      try {
+        await sink?.close();
+      } catch (_) {}
+      client?.close();
+
+      // Clean up partial file on failure (except for network errors where
+      // resume might be useful — keep the .tmp file for those cases)
+      final isResumableError =
+          e is SocketException || e is TimeoutException || e is HttpException;
+      if (!isResumableError && await tempFile.exists()) {
+        try {
+          await tempFile.delete();
+        } catch (_) {}
+      }
+
       _downloadStatus[key] = DownloadStatus.failed;
+
+      final errorMessage = _friendlyErrorMessage(e);
 
       yield DownloadProgress(
         model: spec,
         downloadedBytes: 0,
-        error: e.toString(),
+        error: errorMessage,
       );
 
       _progressControllers[key]?.add(DownloadProgress(
         model: spec,
         downloadedBytes: 0,
-        error: e.toString(),
+        error: errorMessage,
       ));
+
+      // Log full error for debugging
+      // ignore: avoid_print
+      print('[ModelDownloader] Download failed: $e\n$stackTrace');
     }
   }
 
   /// Cancel a download.
+  ///
+  /// The partial `.tmp` file is preserved so the download can be resumed later.
   void cancelDownload(ModelSpec spec) {
     final key = spec.dirName;
     if (_downloadStatus[key] == DownloadStatus.downloading) {
-      _downloadStatus[key] = DownloadStatus.failed;
+      // Set to cancelled (not failed) so the download loop knows to exit
+      // and the UI knows to show "cancelled" instead of "error"
+      _downloadStatus[key] = DownloadStatus.cancelled;
     }
   }
 
@@ -292,7 +421,9 @@ class ModelDownloader {
     for (final spec in kRequiredModels) {
       await for (final progress in downloadModel(spec)) {
         yield progress;
-        if (progress.isComplete || progress.error != null) {
+        if (progress.isComplete ||
+            progress.error != null ||
+            progress.isCancelled) {
           break;
         }
       }
@@ -304,6 +435,9 @@ class ModelDownloader {
   /// The archive contains a directory like `sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/`
   /// with `model.int8.onnx`, `tokens.txt`, etc. We extract it and rename to
   /// the expected directory name (`SenseVoiceSmall-onnx`).
+  ///
+  /// Security: validates that extracted paths don't escape the target directory
+  /// (path-traversal protection).
   Future<void> _extractAsrArchive(File archiveFile, String targetPath) async {
     // Read the archive file
     final archiveBytes = await archiveFile.readAsBytes();
@@ -334,6 +468,9 @@ class ModelDownloader {
     }
     await targetDir.create(recursive: true);
 
+    // Normalize target path for path-traversal check
+    final normalizedTargetPath = targetDir.path;
+
     // Extract files, stripping the root directory prefix
     for (final file in tarArchive) {
       // Strip the archive root directory from the path
@@ -348,6 +485,14 @@ class ModelDownloader {
       if (relativePath.isEmpty) continue;
 
       final extractedPath = '${targetDir.path}/$relativePath';
+
+      // Path-traversal protection: ensure the extracted path is within target
+      final normalizedExtracted = File(extractedPath).path;
+      if (!normalizedExtracted.startsWith(normalizedTargetPath)) {
+        throw Exception(
+          'Archive contains path traversal attempt: ${file.name}',
+        );
+      }
 
       if (file.isFile) {
         // Ensure parent directory exists

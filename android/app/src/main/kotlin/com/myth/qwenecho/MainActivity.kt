@@ -1,7 +1,7 @@
-package com.example.qwen_echo
+package com.myth.qwenecho
 
-import com.example.qwen_echo.engine.EnginePlugin
-import com.example.qwen_echo.engine.TtsPlugin
+import com.myth.qwenecho.engine.EnginePlugin
+import com.myth.qwenecho.engine.TtsPlugin
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 
