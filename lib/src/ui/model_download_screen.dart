@@ -79,6 +79,14 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
           _progress[ModelKind.asr] = progress;
         });
 
+        if (progress.isCancelled) {
+          debugPrint('[Download] ASR download cancelled by user');
+          setState(() {
+            _isDownloading = false;
+          });
+          return;
+        }
+
         if (progress.error != null) {
           setState(() {
             _errorMessage = 'ASR 模型下载失败: ${progress.error}';
@@ -102,6 +110,14 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
         setState(() {
           _progress[ModelKind.llm] = progress;
         });
+
+        if (progress.isCancelled) {
+          debugPrint('[Download] LLM download cancelled by user');
+          setState(() {
+            _isDownloading = false;
+          });
+          return;
+        }
 
         if (progress.error != null) {
           setState(() {

@@ -43,12 +43,17 @@ class ModelSpec {
   /// Maximum permitted on-disk size in bytes (per Requirement 16).
   final int maxSizeBytes;
 
+  /// Expected file size in bytes for download validation.
+  /// Used to verify download completeness and for disk-space preflight.
+  final int? expectedSizeBytes;
+
   const ModelSpec({
     required this.kind,
     required this.displayName,
     required this.subtitle,
     required this.dirName,
     required this.maxSizeBytes,
+    this.expectedSizeBytes,
   });
 }
 
@@ -63,6 +68,7 @@ const List<ModelSpec> kRequiredModels = <ModelSpec>[
     subtitle: 'Offline ASR · sherpa-onnx · 373 MB',
     dirName: 'SenseVoiceSmall-onnx',
     maxSizeBytes: 400 * 1024 * 1024, // ~373MB actual; 400MB ceiling
+    expectedSizeBytes: 391000000, // ~373MB archive (approximate)
   ),
   ModelSpec(
     kind: ModelKind.llm,
@@ -70,6 +76,7 @@ const List<ModelSpec> kRequiredModels = <ModelSpec>[
     subtitle: 'Bilingual Translation · llama.cpp GGUF · 508 MB',
     dirName: 'Qwen3.5-0.8B-Q4_K_M.gguf',
     maxSizeBytes: 600 * 1024 * 1024, // ~508MB expected; 600MB ceiling
+    expectedSizeBytes: 532000000, // ~508MB (approximate)
   ),
 ];
 
