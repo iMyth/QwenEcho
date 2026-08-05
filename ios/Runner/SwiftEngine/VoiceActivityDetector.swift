@@ -101,16 +101,20 @@ final class VoiceActivityDetector {
 
     /// Feed audio samples for VAD processing.
     /// Processes audio in 10ms frames.
+    ///
+    /// Performance: processes frames in-place without allocating per-frame
+    /// arrays. The previous implementation called `Array(samples[i..<(i+take)])`
+    /// ~100×/sec on the audio thread, causing allocation churn that could
+    /// contribute to audio glitches.
     func feedAudio(_ samples: [Int16], speakerId: Int = 0) {
         var i = 0
         while i < samples.count {
             let remaining = samples.count - i
             let take = min(frameSize, remaining)
-            let frame = Array(samples[i..<(i + take)])
-            i += take
+            let frameEnd = i + take
 
-            // Compute energy for this frame
-            let energy = computeEnergy(frame)
+            // Compute energy directly on the slice (no allocation)
+            let energy = computeEnergy(samples, from: i, to: frameEnd)
             let isSpeech = energy > noiseEnergyThreshold
 
             frameCount += 1
@@ -124,7 +128,8 @@ final class VoiceActivityDetector {
                 lastDiagFrameCount = frameCount
             }
 
-            processFrame(frame, isSpeech: isSpeech, speakerId: speakerId)
+            processFrame(samples, from: i, to: frameEnd, isSpeech: isSpeech, speakerId: speakerId)
+            i = frameEnd
         }
     }
 
@@ -137,30 +142,32 @@ final class VoiceActivityDetector {
 
     // MARK: - Private
 
-    private func computeEnergy(_ samples: [Int16]) -> Int32 {
-        guard !samples.isEmpty else { return 0 }
+    private func computeEnergy(_ samples: [Int16], from start: Int, to end: Int) -> Int32 {
+        let count = end - start
+        guard count > 0 else { return 0 }
         var sum: Int64 = 0
-        for s in samples {
-            sum += abs(Int64(s))
+        for idx in start..<end {
+            sum += abs(Int64(samples[idx]))
         }
-        return Int32(sum / Int64(samples.count))
+        return Int32(sum / Int64(count))
     }
 
-    private func processFrame(_ frame: [Int16], isSpeech: Bool, speakerId: Int) {
+    private func processFrame(_ samples: [Int16], from start: Int, to end: Int, isSpeech: Bool, speakerId: Int) {
         let frameMs = 10
+        let range = start..<end
 
         switch state {
         case .idle:
             if isSpeech {
                 state = .accumulating
                 os_log("[VAD] ▶ Speech onset (energy above threshold)")
-                speechBuffer.append(contentsOf: frame)
+                speechBuffer.append(contentsOf: samples[range])
                 speechDurationMs = frameMs
                 silenceDurationMs = 0
             }
 
         case .accumulating:
-            speechBuffer.append(contentsOf: frame)
+            speechBuffer.append(contentsOf: samples[range])
 
             if isSpeech {
                 speechDurationMs += frameMs

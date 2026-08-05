@@ -42,6 +42,13 @@ final class AudioCapture {
         interleaved: false
     )!
 
+    // Sample rate converter with built-in anti-aliasing filter.
+    // Created once per `start()` session based on the input node's format.
+    // Using AVAudioConverter instead of hand-rolled linear interpolation
+    // prevents aliasing artifacts that degrade ASR accuracy.
+    private var audioConverter: AVAudioConverter?
+    private var converterInputFormat: AVAudioFormat?
+
     /// Configure the audio session and request microphone permission.
     ///
     /// Must be called before [start]. Returns the outcome so the caller
@@ -137,7 +144,27 @@ final class AudioCapture {
             // mismatch throws "Failed to create tap due to format mismatch".
             // So we install the tap with the native input format (typically
             // 48 kHz Float32 on the simulator/Mac passthrough path) and do
-            // all conversion inside `processBuffer`.
+            // all conversion inside `processBuffer` using AVAudioConverter,
+            // which provides proper anti-aliasing for the 48kHz→16kHz step.
+
+            // Create a sample-rate converter for this session. AVAudioConverter
+            // handles both format conversion (Float32/Int16 → Int16) and
+            // sample-rate conversion with built-in anti-aliasing filters,
+            // preventing aliasing artifacts that degrade ASR accuracy.
+            let inputFormatForConverter = AVAudioFormat(
+                commonFormat: inputFormat.commonFormat,
+                sampleRate: inputFormat.sampleRate,
+                channels: inputFormat.channelCount,
+                interleaved: inputFormat.isInterleaved
+            )
+            if let inputFormatForConverter {
+                audioConverter = AVAudioConverter(from: inputFormatForConverter, to: targetFormat)
+                converterInputFormat = inputFormatForConverter
+                if audioConverter == nil {
+                    os_log("[AudioCapture] Warning: could not create AVAudioConverter from %@ to %@ — falling back to manual conversion",
+                           inputFormatForConverter, targetFormat)
+                }
+            }
 
             inputNode.removeTap(onBus: 0)
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
@@ -196,6 +223,8 @@ final class AudioCapture {
         }
 
         engine.reset()
+        audioConverter = nil
+        converterInputFormat = nil
 
         isRunning = false
         callback = nil
@@ -223,16 +252,16 @@ final class AudioCapture {
     /// deliver via callback.
     ///
     /// The tap is installed with the input node's native format (typically
-    /// 48 kHz Float32 on the simulator/Mac passthrough path). We must handle
-    /// two things here:
-    ///   1. Data type conversion: Float32 [-1.0, 1.0] → Int16 [-32768, 32767]
-    ///      (or Int16 passthrough if the hardware already gives Int16).
-    ///   2. Sample-rate conversion: 48 kHz → 16 kHz (downsample by 3) via
-    ///      linear interpolation. This is plenty for ASR — SenseVoice is
-    ///      trained on telephone-quality 16 kHz audio.
+    /// 48 kHz Float32 on the simulator/Mac passthrough path). We use
+    /// `AVAudioConverter` for sample-rate and format conversion, which:
+    ///   1. Provides proper anti-aliasing filters (the previous hand-rolled
+    ///      linear interpolation caused aliasing artifacts that degraded
+    ///      ASR accuracy)
+    ///   2. Is hardware-optimized by Apple
+    ///   3. Handles both Float32→Int16 and Int16→Int16 paths uniformly
     ///
-    /// Both conversions happen in a single pass to keep the audio thread
-    /// cheap and allocation-free (aside from the output buffer).
+    /// If the converter cannot be created (rare), we fall back to the manual
+    /// conversion path to maintain compatibility.
     private func processBuffer(_ inputBuffer: AVAudioPCMBuffer) {
         let frameLength = Int(inputBuffer.frameLength)
         guard frameLength > 0 else { return }
@@ -241,9 +270,74 @@ final class AudioCapture {
         let outRate = targetFormat.sampleRate
         guard inRate > 0, outRate > 0 else { return }
 
+        var samples: [Int16]
+
+        // Prefer AVAudioConverter when available — it provides anti-aliasing
+        // and hardware acceleration.
+        if let converter = audioConverter {
+            let ratio = outRate / inRate
+            let outputFrameCapacity = AVAudioFrameCount(max(1, Double(frameLength) * ratio))
+            guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outputFrameCapacity) else {
+                os_log("[AudioCapture] failed to allocate output buffer")
+                return
+            }
+
+            var error: NSError?
+            let status = converter.convert(to: outputBuffer, error: &error) { _, outStatus in
+                outStatus.pointee = .haveData
+                return inputBuffer
+            }
+
+            if status == .error || status == .inputRanDry {
+                os_log("[AudioCapture] AVAudioConverter error: %{public}@", error?.localizedDescription ?? "unknown")
+                samples = []
+            } else {
+                // Extract Int16 samples from the converted buffer.
+                let convertedFrames = Int(outputBuffer.frameLength)
+                if let int16Channel = outputBuffer.int16ChannelData?[0] {
+                    samples = Array(UnsafeBufferPointer(start: int16Channel, count: convertedFrames))
+                } else {
+                    samples = []
+                }
+            }
+        } else {
+            // Fallback: manual conversion (used only if converter creation failed).
+            // This path has the old aliasing issue but maintains compatibility.
+            samples = manualConvert(inputBuffer, frameLength: frameLength, inRate: inRate, outRate: outRate)
+        }
+
+        // Diagnostic: confirm buffers are flowing and at what energy level.
+        // First buffer logged unconditionally; then every 50 buffers (~3s)
+        // we log min/max/avg so we can tell silence from speech.
+        bufferCount += 1
+        if bufferCount == 1 {
+            os_log("[AudioCapture] ✓ First buffer received: %d in → %d out samples (%.0f→%.0f Hz, converter=%{public}@).",
+                   frameLength, samples.count, inRate, outRate,
+                   audioConverter != nil ? "yes" : "no")
+        }
+        if bufferCount == 1 || bufferCount - lastDiagnosticBufferCount >= 50 {
+            var sum: Int64 = 0
+            var peak: Int16 = 0
+            for s in samples {
+                let a = abs(Int32(s))
+                sum += Int64(a)
+                if a > abs(Int32(peak)) { peak = s }
+            }
+            let avg = samples.isEmpty ? 0 : Int(sum / Int64(samples.count))
+            os_log("[AudioCapture] diag #%d: frames=%d avg=%d peak=%d",
+                   bufferCount, samples.count, avg, Int(abs(Int32(peak))))
+            lastDiagnosticBufferCount = bufferCount
+        }
+
+        callback?(samples)
+    }
+
+    /// Fallback manual conversion (used only when AVAudioConverter is unavailable).
+    /// This preserves the original behavior but lacks anti-aliasing.
+    private func manualConvert(_ inputBuffer: AVAudioPCMBuffer, frameLength: Int, inRate: Double, outRate: Double) -> [Int16] {
         let ratio = inRate / outRate
         let outputFrames = Int(Double(frameLength) / ratio)
-        guard outputFrames > 0 else { return }
+        guard outputFrames > 0 else { return [] }
 
         var samples = [Int16]()
         samples.reserveCapacity(outputFrames)
@@ -290,33 +384,9 @@ final class AudioCapture {
                 samples.append(value)
             }
         } else {
-            // Unsupported format — log and skip.
             os_log("[AudioCapture] buffer has neither float nor Int16 data — skipping")
-            return
         }
 
-        // Diagnostic: confirm buffers are flowing and at what energy level.
-        // First buffer logged unconditionally; then every 50 buffers (~3s)
-        // we log min/max/avg so we can tell silence from speech.
-        bufferCount += 1
-        if bufferCount == 1 {
-            os_log("[AudioCapture] ✓ First buffer received: %d in → %d out samples (%.0f→%.0f Hz).",
-                   frameLength, samples.count, inRate, outRate)
-        }
-        if bufferCount == 1 || bufferCount - lastDiagnosticBufferCount >= 50 {
-            var sum: Int64 = 0
-            var peak: Int16 = 0
-            for s in samples {
-                let a = abs(Int32(s))
-                sum += Int64(a)
-                if a > abs(Int32(peak)) { peak = s }
-            }
-            let avg = samples.isEmpty ? 0 : Int(sum / Int64(samples.count))
-            os_log("[AudioCapture] diag #%d: frames=%d avg=%d peak=%d",
-                   bufferCount, samples.count, avg, Int(abs(Int32(peak))))
-            lastDiagnosticBufferCount = bufferCount
-        }
-
-        callback?(samples)
+        return samples
     }
 }
