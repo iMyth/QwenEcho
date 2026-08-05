@@ -25,7 +25,11 @@ final class VoiceActivityDetector {
     private let silenceThresholdMs: Int
     private let minSpeechMs: Int
     private let maxSegmentMs: Int
-    private let noiseEnergyThreshold: Int32
+    private let baseNoiseEnergyThreshold: Int32
+
+    // Dynamic threshold for TTS echo cancellation
+    // When TTS is playing, we increase the threshold to avoid picking up TTS output
+    private var currentNoiseEnergyThreshold: Int32
 
     // State
     private enum State: CustomStringConvertible { case idle, accumulating
@@ -60,8 +64,18 @@ final class VoiceActivityDetector {
         self.silenceThresholdMs = silenceThresholdMs
         self.minSpeechMs = minSpeechMs
         self.maxSegmentMs = maxSegmentMs
-        self.noiseEnergyThreshold = noiseEnergyThreshold
+        self.baseNoiseEnergyThreshold = noiseEnergyThreshold
+        self.currentNoiseEnergyThreshold = noiseEnergyThreshold
         self.frameSize = sampleRate / 100 // 10ms frames
+    }
+
+    /// Set threshold multiplier for dynamic sensitivity adjustment.
+    /// Used during TTS playback to avoid picking up TTS output as speech.
+    /// - Parameter multiplier: 1.0 = normal, >1.0 = less sensitive (e.g., 2.5)
+    func setThresholdMultiplier(_ multiplier: Float) {
+        currentNoiseEnergyThreshold = Int32(Float(baseNoiseEnergyThreshold) * multiplier)
+        os_log("[VAD] Threshold multiplier set to %.1f (base=%d, current=%d)",
+               multiplier, Int(baseNoiseEnergyThreshold), Int(currentNoiseEnergyThreshold))
     }
 
     /// Set the callback invoked when a segment is locked.
@@ -115,7 +129,7 @@ final class VoiceActivityDetector {
 
             // Compute energy directly on the slice (no allocation)
             let energy = computeEnergy(samples, from: i, to: frameEnd)
-            let isSpeech = energy > noiseEnergyThreshold
+            let isSpeech = energy > currentNoiseEnergyThreshold
 
             frameCount += 1
 
@@ -123,7 +137,7 @@ final class VoiceActivityDetector {
             // state transition (logged in processFrame).
             if frameCount == 1 || frameCount - lastDiagFrameCount >= 200 {
                 os_log("[VAD] diag #%d: energy=%d thresh=%d speech=%{public}@ state=%{public}@",
-                       frameCount, Int(energy), Int(noiseEnergyThreshold),
+                       frameCount, Int(energy), Int(currentNoiseEnergyThreshold),
                        String(isSpeech), String(describing: state))
                 lastDiagFrameCount = frameCount
             }
